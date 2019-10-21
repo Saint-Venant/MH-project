@@ -16,16 +16,19 @@ def readInstance(instanceName):
 
 instance = readInstance(instanceName)
 
-def make_Acapt(instance, Rcapt):
-    # Cette fonction fait la matrice Acapt telle que Acapt[i,j]=1 ssi
-    # dist(i,j)<=Rcapt pour i et j deux cibles
+def make_Adj(instance, R):
+    # Cette fonction fait la matrice d'adjacence telle que Adj[i,j]=1 ssi
+    # dist(i,j)<=R pour i et j deux cibles
     n = len(instance)
-    Acapt = np.zeros((n,n), dtype=np.int)
+    Adj = np.zeros((n,n), dtype=np.int)
     for i in range(n):
         for j in range(n):
-            if rd.distance2(instance[i], instance[j]) <= Rcapt:
-                Acapt[i, j] = 1
-    return Acapt
+            if rd.distance2(instance[i], instance[j]) <= R:
+                Adj[i, j] = 1
+    return Adj
 
 Rcapt = 1
-Acapt = make_Acapt(instance, Rcapt)
+Acapt = make_Adj(instance, Rcapt)
+
+Rcom = 2
+Acom = make_Adj(instance, Rcom)
