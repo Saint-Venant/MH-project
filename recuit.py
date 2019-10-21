@@ -6,8 +6,9 @@ On représente une solution par un vecteur de taille n (nombre de cibles):
     - sol[i] = 1 si cible 1 reçoit un capteur
     - sol[i] = 0 sinon
 '''
+import numpy as np
 
-import parser
+import parserInstance
 
 
 def contrainteCapt(solution, Acapt):
@@ -56,10 +57,22 @@ def V1(solution):
 
 def recuit(instanceName, Rcapt, Rcom):
     # parse data
-    Rcapt = 1
-    Rcom = 2
-    Acapt, Acom = parser.parseData(instanceName, Rcapt, Rcom)
+    Acapt, Acom = parserInstance.parseData(instanceName, Rcapt, Rcom)
+    nNodes = Acapt.shape[0]
+
+    # parameters
+    coefCapt = 1
+    coefCom = 1
     
     # initialisation
+    bestSolution = np.ones(nNodes, dtype=np.int)
+    bestScore = np.sum(bestSolution)
 
     # iterations
+
+if __name__ == '__main__':
+    Rcapt = 1
+    Rcom = 2
+    instanceName = 'Instances/captANOR225_9_20.dat'
+
+    recuit(instanceName, Rcapt, Rcom)
