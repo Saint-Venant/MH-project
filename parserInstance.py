@@ -1,6 +1,6 @@
 import numpy as np
 
-import readData as rd
+from readData import distance2
 
 
 def readInstance(instanceName):
@@ -18,7 +18,7 @@ def make_Adj(instance, R):
     Adj = np.zeros((n,n), dtype=np.int)
     for i in range(n):
         for j in range(n):
-            if rd.distance2(instance[i], instance[j]) <= R:
+            if distance2(instance[i], instance[j]) <= R:
                 Adj[i, j] = 1
     return Adj
 
