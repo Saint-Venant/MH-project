@@ -13,7 +13,7 @@ names = [
     'captANOR225_9_20.dat',
     'captANOR400_10_80.dat',
     'captANOR625_15_100.dat',
-    'captANOR900_12_20.dat',
+    'captANOR900_15_20.dat',
     'captANOR1500_15_100.dat',
     'captANOR1500_21_500.dat']
 instanceNames = ['../Instances/{}'.format(x) for x in names]
@@ -30,7 +30,7 @@ for instanceName in instanceNames:
             instanceName,
             Rcapt,
             Rcom,
-            maxIter=10**3)
+            maxIter=10**2)
         t2 = time.time()
         result = [instanceName, Rcapt, Rcom, bestSolution, vectScore, t2-t1]
         vectResult.append(result)
