@@ -40,3 +40,8 @@ def contrainteCom(solution, Acom):
 
     return violationCom
 
+def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom):
+    violationCapt = contrainteCapt(solution, Acapt)
+    violationCom = contrainteCom(solution, Acom)
+    energy = coefCapt*np.sum(violationCapt) + coefCom*np.sum(violationCom)
+    return energy
