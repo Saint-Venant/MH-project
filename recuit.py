@@ -42,10 +42,12 @@ def contrainteCom(solution, Acom):
 
     return violationCom
 
-def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom):
+def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom, coefSize):
     violationCapt = contrainteCapt(solution, Acapt)
     violationCom = contrainteCom(solution, Acom)
-    energy = coefCapt*np.sum(violationCapt) + coefCom*np.sum(violationCom)
+    energy = coefCapt*np.sum(violationCapt) + \
+             coefCom*np.sum(violationCom) + \
+             coefSize*np.sum(solution)
     return energy
 
 def V1(solution):
@@ -63,12 +65,42 @@ def recuit(instanceName, Rcapt, Rcom):
     # parameters
     coefCapt = 1
     coefCom = 1
+    maxIter = 10**3
+    T0 = 1
+    alpha = 0.9999
     
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
     bestScore = np.sum(bestSolution)
+    bestEnergy = computeEnergy(bestSolution, Acapt, Acom, coefCapt, coefCom)
+    
+    solution = np.copy(bestSolution)
+    score = bestScore
+    energy = bestEnergy
+
+    T = T0
 
     # iterations
+    it = 0
+    while it < maxIter:
+        solBis = V1(solution)
+        energyBis = computeEnergy(solBis, Acapt, Acom, coefCapt, coefCom)
+        if energyBis < energy:
+            solution = solBis
+            energy = energyBis
+        else:
+            delta = energyBis - energy
+            proba = np.exp(-delta/T)
+            if np.random.random() < proba:
+                solution = solBis
+                energy = energyBis
+
+        if energy < bestEnergy:
+            bestEnergy = 
+
+        it += 1
+        T = alpha*T
+        
 
 if __name__ == '__main__':
     Rcapt = 1
