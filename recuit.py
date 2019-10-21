@@ -57,16 +57,16 @@ def V1(solution):
     solBis[i] = (solBis[i] + 1)%2
     return solBis
 
-def recuit(instanceName, Rcapt, Rcom):
+def recuit(instanceName, Rcapt, Rcom, verbose=False):
     # parse data
     Acapt, Acom = parserInstance.parseData(instanceName, Rcapt, Rcom)
     nNodes = Acapt.shape[0]
 
     # parameters
-    coefCapt = 5
-    coefCom = 10
+    coefCapt = 100
+    coefCom = 100
     coefSize = 1
-    maxIter = 10**3
+    maxIter = 10**4
     T0 = 1
     alpha = 0.9999
     
@@ -82,6 +82,11 @@ def recuit(instanceName, Rcapt, Rcom):
 
     T = T0
     vectScore = []
+    msg = 'It = {} ; energy : {} ; bestEnergy : {} ; bestScore : {}'
+
+    if verbose:
+        print(msg.format('Init', energy, bestEnergy, bestScore))
+        print('    T = {}'.format(T))
 
     # iterations
     it = 0
@@ -102,10 +107,17 @@ def recuit(instanceName, Rcapt, Rcom):
         if energy < bestEnergy:
             bestEnergy = energy
             bestSolution = solution
+        score = np.sum(solution)
+        if score < bestScore:
+            bestScore = score
 
         it += 1
         T = alpha*T
         vectScore.append(np.sum(solution))
+        
+        if verbose and (it%100 == 0):
+            print(msg.format(it, energy, bestEnergy, bestScore))
+            print('    T = {}'.format(T))
 
     return bestSolution, vectScore
         
@@ -115,4 +127,4 @@ if __name__ == '__main__':
     Rcom = 2
     instanceName = 'Instances/captANOR225_9_20.dat'
 
-    bestSolution, vectScore = recuit(instanceName, Rcapt, Rcom)
+    bestSolution, vectScore = recuit(instanceName, Rcapt, Rcom, verbose=True)
