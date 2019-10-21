@@ -53,7 +53,7 @@ def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom, coefSize):
 def V1(solution):
     n = len(solution)
     solBis = np.copy(solution)
-    i = np.random.randint(n)
+    i = np.random.randint(1, n)
     solBis[i] = (solBis[i] + 1)%2
     return solBis
 
