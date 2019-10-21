@@ -63,8 +63,9 @@ def recuit(instanceName, Rcapt, Rcom):
     nNodes = Acapt.shape[0]
 
     # parameters
-    coefCapt = 1
-    coefCom = 1
+    coefCapt = 5
+    coefCom = 10
+    coefSize = 1
     maxIter = 10**3
     T0 = 1
     alpha = 0.9999
@@ -72,19 +73,22 @@ def recuit(instanceName, Rcapt, Rcom):
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
     bestScore = np.sum(bestSolution)
-    bestEnergy = computeEnergy(bestSolution, Acapt, Acom, coefCapt, coefCom)
+    bestEnergy = computeEnergy(bestSolution, Acapt, Acom, coefCapt, coefCom, \
+                               coefSize)
     
     solution = np.copy(bestSolution)
     score = bestScore
     energy = bestEnergy
 
     T = T0
+    vectScore = []
 
     # iterations
     it = 0
     while it < maxIter:
         solBis = V1(solution)
-        energyBis = computeEnergy(solBis, Acapt, Acom, coefCapt, coefCom)
+        energyBis = computeEnergy(solBis, Acapt, Acom, coefCapt, coefCom, \
+                                  coefSize)
         if energyBis < energy:
             solution = solBis
             energy = energyBis
@@ -96,10 +100,14 @@ def recuit(instanceName, Rcapt, Rcom):
                 energy = energyBis
 
         if energy < bestEnergy:
-            bestEnergy = 
+            bestEnergy = energy
+            bestSolution = solution
 
         it += 1
         T = alpha*T
+        vectScore.append(np.sum(solution))
+
+    return bestSolution, vectScore
         
 
 if __name__ == '__main__':
@@ -107,4 +115,4 @@ if __name__ == '__main__':
     Rcom = 2
     instanceName = 'Instances/captANOR225_9_20.dat'
 
-    recuit(instanceName, Rcapt, Rcom)
+    bestSolution, vectScore = recuit(instanceName, Rcapt, Rcom)
