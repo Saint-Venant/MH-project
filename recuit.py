@@ -45,3 +45,10 @@ def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom):
     violationCom = contrainteCom(solution, Acom)
     energy = coefCapt*np.sum(violationCapt) + coefCom*np.sum(violationCom)
     return energy
+
+def V1(solution):
+    n = len(solution)
+    solBis = np.copy(solution)
+    i = np.random.randint(n)
+    solBis[i] = (solBis[i] + 1)%2
+    return solBis
