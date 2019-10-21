@@ -7,6 +7,7 @@ On représente une solution par un vecteur de taille n (nombre de cibles):
     - sol[i] = 0 sinon
 '''
 
+import parser
 
 
 def contrainteCapt(solution, Acapt):
@@ -52,3 +53,13 @@ def V1(solution):
     i = np.random.randint(n)
     solBis[i] = (solBis[i] + 1)%2
     return solBis
+
+def recuit(instanceName, Rcapt, Rcom):
+    # parse data
+    Rcapt = 1
+    Rcom = 2
+    Acapt, Acom = parser.parseData(instanceName, Rcapt, Rcom)
+    
+    # initialisation
+
+    # iterations
