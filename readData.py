@@ -25,6 +25,8 @@ from math import sqrt
 RcaptRcom=[[1,1],[1,2],[2,2],[2,3]]
 Rcapt,Rcom=RcaptRcom[0]
 
+instanceName = 'Instances/captANOR225_9_20.dat'
+
 def distance(a,b):
 #    Calcule la distance de deux points dans le plan
     if len(a)!=2 and len(b)!=2:
@@ -53,7 +55,7 @@ def distance2(a,b):
 
             
 liste = []
-for line in open('captANOR225_9_20.dat'):
+for line in open(instanceName):
     try:
         tmp = [float(x) for x in line.split() if x]
         if tmp:
@@ -185,14 +187,15 @@ def longueurSolution(l):
         return len(l)
     else : print("errortype",type(l))
                 
-    
-exemple1=   [[0,0,0],
-             [1,1,0],
-             [2,1,1],
-             [3,1,2],
-             [4,0,-1],
-             [5,-1,-1]]
 
-MakeAcom(exemple1)
-contraintecom(exemple1)
+if __name__ == '__main__':    
+    exemple1=   [[0,0,0],
+                 [1,1,0],
+                 [2,1,1],
+                 [3,1,2],
+                 [4,0,-1],
+                 [5,-1,-1]]
+
+    MakeAcom(exemple1)
+    contraintecom(exemple1)
 
