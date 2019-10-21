@@ -13,16 +13,11 @@ import parserInstance
 
 
 def contrainteCapt(solution, Acapt):
-    n = len(solution)
     assert(solution[0] == 1)
-    
-    violationCapt = np.ones(n, dtype=np.int)
-    indexCapteurs = np.where(solution == 1)[0]
-    for i in indexCapteurs:
-        for j in range(n):
-            if (violationCapt[j] == 1) and (Acapt[i, j] == 1):
-                violationCapt[j] = 0
 
+    indexSelected = np.where(solution == 1)[0]
+    Scapt = np.sum(Acapt[indexSelected, :], axis=0)
+    violationCapt = np.where(Scapt > 0, 0, 1)
     return violationCapt
 
 def contrainteCom(solution, Acom):
