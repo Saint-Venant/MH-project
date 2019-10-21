@@ -10,7 +10,7 @@ def readInstance(instanceName):
     return instance
 
 def distance2(a, b):
-    dist = np.sqrt((a[1] - b[1])**2 + (a[2] + b[2])**2)
+    dist = np.sqrt((a[1] - b[1])**2 + (a[2] - b[2])**2)
     return dist
 
 def make_Adj(instance, R):
