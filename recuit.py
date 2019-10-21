@@ -7,6 +7,7 @@ On représente une solution par un vecteur de taille n (nombre de cibles):
     - sol[i] = 0 sinon
 '''
 import numpy as np
+import time
 
 import parserInstance
 
@@ -57,7 +58,7 @@ def V1(solution):
     solBis[i] = (solBis[i] + 1)%2
     return solBis
 
-def recuit(instanceName, Rcapt, Rcom, verbose=False):
+def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     # parse data
     Acapt, Acom = parserInstance.parseData(instanceName, Rcapt, Rcom)
     nNodes = Acapt.shape[0]
@@ -66,9 +67,8 @@ def recuit(instanceName, Rcapt, Rcom, verbose=False):
     coefCapt = 100
     coefCom = 100
     coefSize = 1
-    maxIter = 10**4
     T0 = 1
-    alpha = 0.9999
+    alpha = 0.99982
     
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
@@ -127,4 +127,7 @@ if __name__ == '__main__':
     Rcom = 2
     instanceName = 'Instances/captANOR225_9_20.dat'
 
+    t1 = time.time()
     bestSolution, vectScore = recuit(instanceName, Rcapt, Rcom, verbose=True)
+    t2 = time.time()
+    print('\ndt : {}'.format(t2-t1))
