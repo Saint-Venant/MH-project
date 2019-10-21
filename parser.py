@@ -3,9 +3,6 @@ import numpy as np
 import readData as rd
 
 
-instanceName = 'Instances/captANOR225_9_20.dat'
-
-
 def readInstance(instanceName):
     instance = []
     for line in open(instanceName):
@@ -13,8 +10,6 @@ def readInstance(instanceName):
         tmp = [int(row[0])] + [float(x) for x in row[1:]]
         instance.append(tmp)
     return instance
-
-instance = readInstance(instanceName)
 
 def make_Adj(instance, R):
     # Cette fonction fait la matrice d'adjacence telle que Adj[i,j]=1 ssi
@@ -27,8 +22,14 @@ def make_Adj(instance, R):
                 Adj[i, j] = 1
     return Adj
 
-Rcapt = 1
-Acapt = make_Adj(instance, Rcapt)
+def parseData(instanceName, Rcapt, Rcom):
+    instance = readInstance(instanceName)
+    Acapt = make_Adj(instance, Rcapt)
+    Acom = make_Adj(instance, Rcom)
+    return Acapt, Acom
 
-Rcom = 2
-Acom = make_Adj(instance, Rcom)
+if __name__ == '__main__':
+    instanceName = 'Instances/captANOR225_9_20.dat'
+    Rcapt = 1
+    Rcom = 2
+    Acapt, Acom = parseData(instanceName, Rcapt, Rcom)
