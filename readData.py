@@ -22,11 +22,6 @@ Created on Thu Oct 17 18:52:04 2019
 import numpy as np
 from math import sqrt
 
-RcaptRcom=[[1,1],[1,2],[2,2],[2,3]]
-Rcapt,Rcom=RcaptRcom[0]
-
-instanceName = 'Instances/captANOR225_9_20.dat'
-
 def distance(a,b):
 #    Calcule la distance de deux points dans le plan
     if len(a)!=2 and len(b)!=2:
@@ -188,7 +183,7 @@ def longueurSolution(l):
     else : print("errortype",type(l))
                 
 
-if __name__ == '__main__':    
+if __name__ == '__main__': 
     exemple1=   [[0,0,0],
                  [1,1,0],
                  [2,1,1],

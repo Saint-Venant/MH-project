@@ -1,7 +1,5 @@
 import numpy as np
 
-from readData import distance2
-
 
 def readInstance(instanceName):
     instance = []
@@ -10,6 +8,10 @@ def readInstance(instanceName):
         tmp = [int(row[0])] + [float(x) for x in row[1:]]
         instance.append(tmp)
     return instance
+
+def distance2(a, b):
+    dist = np.sqrt((a[1] - b[1])**2 + (a[2] + b[2])**2)
+    return dist
 
 def make_Adj(instance, R):
     # Cette fonction fait la matrice d'adjacence telle que Adj[i,j]=1 ssi
