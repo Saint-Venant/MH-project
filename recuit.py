@@ -55,7 +55,8 @@ def V1(solution):
 
 def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     # parse data
-    Acapt, Acom = parserInstance.parseData(instanceName, Rcapt, Rcom)
+    Acapt, Acom, NeighCapt, NeighCom = parserInstance.parseData(
+        instanceName, Rcapt, Rcom)
     nNodes = Acapt.shape[0]
 
     # parameters

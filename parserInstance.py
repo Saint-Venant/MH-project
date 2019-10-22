@@ -24,14 +24,28 @@ def make_Adj(instance, R):
                 Adj[i, j] = 1
     return Adj
 
+def make_Neigh(Adj):
+    '''
+    Create the list of all the neighbors for each vertex
+    '''
+    n = Adj.shape[0]
+    Neigh = []
+    for i in range(n):
+        v = np.where(Adj[i, :] == 1)[0]
+        v = v[v != i]
+        Neigh.append([v.shape[0], v])
+    return Neigh
+
 def parseData(instanceName, Rcapt, Rcom):
     instance = readInstance(instanceName)
     Acapt = make_Adj(instance, Rcapt)
     Acom = make_Adj(instance, Rcom)
-    return Acapt, Acom
+    NeighCapt = make_Neigh(Acapt)
+    NeighCom = make_Neigh(Acom)
+    return Acapt, Acom, NeighCapt, NeighCom
 
 if __name__ == '__main__':
     instanceName = 'Instances/captANOR225_9_20.dat'
     Rcapt = 1
     Rcom = 2
-    Acapt, Acom = parseData(instanceName, Rcapt, Rcom)
+    Acapt, Acom, NeighCapt, NeighCom = parseData(instanceName, Rcapt, Rcom)
