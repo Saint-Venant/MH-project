@@ -37,13 +37,11 @@ def greedyDelete(solution, Acapt, Acom, NeighCom):
             ind += 1
     return solBis, feasible
 
-def greedyInsert1(solution, score, Acapt, Acom, NeighCom):
+def greedyPivot1(solution, Acapt, Acom, NeighCom):
     '''
     For a given solution, test if this move if possible :
         Select an empty vertex
         Try to delete as many other vertices as possible
-
-    score : current score of the solution
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
@@ -58,9 +56,9 @@ def greedyInsert1(solution, score, Acapt, Acom, NeighCom):
         solBis[i] = 1
 
         # candidates to be deleted
-        candidates = [i] + NeighCom[i][1]
+        v = NeighCom[i][1].copy()
+        candidates = [j for j in v if (solBis[j] == 1) and (j > 0)]
         nCandidates = len(candidates)
-        assert(nCandidates >= 2)
 
         # find a pair of vertices to delete
         np.random.shuffle(candidates)
@@ -90,7 +88,7 @@ def greedyInsert1(solution, score, Acapt, Acom, NeighCom):
         else:
             improved = True
 
-    return solBis, feasible
+    return solBis, improved
 
 def VNS(instanceName, Rcapt, Rcom):
     '''
@@ -108,13 +106,25 @@ def VNS(instanceName, Rcapt, Rcom):
     assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
     score = np.sum(solution)
 
-    # iterations
+    # iterations neighborhood 1
     descent = True
     while descent:
         solution, descent = greedyDelete(solution, Acapt, Acom, NeighCom)
         score = np.sum(solution)
+        assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
+    score1 = score
 
-    return score
+    # iterations neighborhood 2
+    descent = True
+    while descent:
+        solution, descent = greedyPivot1(solution, Acapt, Acom, NeighCom)
+        score = np.sum(solution)
+    assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
+    score2 = score
+
+    
+
+    return score1, score2
 
 
 if __name__ == '__main__':
@@ -123,15 +133,23 @@ if __name__ == '__main__':
     instanceName = 'Instances/captANOR225_9_20.dat'
 
     t1 = time.time()
-    score = VNS(instanceName, Rcapt, Rcom)
+    score1, score2 = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
-    print('score : {}'.format(score))
+    print('score1 : {}'.format(score1))
+    print('score2 : {}'.format(score2))
     print('\ndt : {}\n'.format(t2-t1))
 
-    vectScore = []
+    vectScore1 = []
+    vectScore2 = []
+    t1 = time.time()
     for i in range(100):
-        score = VNS(instanceName, Rcapt, Rcom)
-        vectScore.append(score)
-    print('score mean : {}'.format(np.mean(vectScore)))
-    print('score min : {}'.format(np.min(vectScore)))
+        score1, score2 = VNS(instanceName, Rcapt, Rcom)
+        vectScore1.append(score1)
+        vectScore2.append(score2)
+    t2 = time.time()
+    print('score1 mean : {}'.format(np.mean(vectScore1)))
+    print('score1 min : {}\n'.format(np.min(vectScore1)))
+    print('score2 mean : {}'.format(np.mean(vectScore2)))
+    print('score2 min : {}\n'.format(np.min(vectScore2)))
+    print(t2 - t1)
     
