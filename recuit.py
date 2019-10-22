@@ -141,32 +141,40 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     # iterations
     it = 0
     while it < maxIter:
+        # evaluate a neighbor
         solBis = V1(solution)
         energyBis, okBis = computeEnergy(
             solBis, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
+
+        # evaluate whether or not to update the solution
+        move = False
         if energyBis < energy:
-            solution = solBis
-            energy = energyBis
-            ok = okBis
+            move = True
         else:
             delta = energyBis - energy
             proba = np.exp(-delta/T)
             if np.random.random() < proba:
-                solution = solBis
-                energy = energyBis
-                ok = okBis
+                move = True
 
+        if move:
+            solution = solBis
+            energy = energyBis
+            ok = okBis
+
+        # update track of best solution
         if energy < bestEnergy:
             bestEnergy = energy
         if ok:
             score = np.sum(solution)
-            if score < bestScore:
-                bestScore = score
-                bestSolution = solution
+        else:
+            score = np.inf
+        if score < bestScore:
+            bestScore = score
+            bestSolution = solution
 
         it += 1
         T = alpha*T
-        vectScore.append(np.sum(solution))
+        vectScore.append(score)
         
         if verbose and (it%100 == 0):
             print(msg.format(it, energy, bestEnergy, bestScore))
