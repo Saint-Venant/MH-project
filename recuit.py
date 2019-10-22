@@ -16,46 +16,9 @@ import numpy as np
 import time
 
 import parserInstance
+import constraints
 
 
-def contrainteCapt(solution, Acapt):
-    '''
-    Return a list v of n elements where:
-        - n = number of vertices
-        - v_i = * 0 if capt constraint is respected for vertex i
-                * 1 otherwise
-    '''
-    solution
-    assert(solution[0] == 1)
-
-    indexSelected = np.where(solution == 1)[0]
-    Scapt = np.sum(Acapt[indexSelected, :], axis=0)
-    violationCapt = np.where(Scapt > 0, 0, 1)
-    return violationCapt
-
-def contrainteCom(solution, Acom, NeighCom):
-    '''
-    Return a list v of n elements where:
-        - n = number of vertices
-        - v_i = * 0 if com constraint is respected for vertex i
-                * 1 otherwise
-    '''
-    n = len(solution)
-    assert(solution[0] == 1)
-
-    violationCom = np.copy(solution)
-    violationCom[0] = 0
-    file = [0]
-
-    while len(file) > 0:
-        i = file.pop(0)
-        v = NeighCom[i][1]
-        for j in v:
-            if (violationCom[j] == 1) and (Acom[i, j] == 1):
-                violationCom[j] = 0
-                file.append(j)
-
-    return violationCom
 
 def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
     '''
@@ -71,8 +34,8 @@ def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
         - ok : * True if solution is feasbible
                * False otherwise
     '''
-    violationCapt = contrainteCapt(solution, Acapt)
-    violationCom = contrainteCom(solution, Acom, NeighCom)
+    violationCapt = constraints.contrainteCapt(solution, Acapt)
+    violationCom = constraints.contrainteCom(solution, Acom, NeighCom)
     sCapt = np.sum(violationCapt)
     sCom = np.sum(violationCom)
     energy = coefCapt*sCapt + coefCom*sCom + coefSize*np.sum(solution)
