@@ -13,14 +13,29 @@ import numpy as np
 import time
 
 import parserInstance
+import constraints
 
 
-
-def greedyDelete(solution, Acapt, Acom):
+def greedyDelete(solution, Acapt, Acom, NeighCom):
+    '''
+    For a given solution, delete 1 vertex if possible (remains feasible)
+    '''
     solBis = np.copy(solution)
     indexSelected = np.where(solution == 1)[0]
-    for i in indexSelected:
-        
+    nSelected = indexSelected.shape[0]
+    assert(nSelected > 0)
+
+    np.random.shuffle(indexSelected)
+    ind = 0
+    feasible = False
+    while not(feasible) and (ind < nSelected):
+        i = indexSelected[ind]
+        solBis[i] = 0
+        feasible = constraints.checkConstraints(solBis, Acapt, Acom, NeighCom)
+        if not(feasible):
+            solBis[i] = 1
+            ind += 1
+    return solBis, feasible
 
 def VNS(instanceName, Rcapt, Rcom):
     '''
@@ -32,6 +47,6 @@ def VNS(instanceName, Rcapt, Rcom):
     nNodes = Acapt.shape[0]
 
     # parameters
-    sizePop = 10
+    
 
     
