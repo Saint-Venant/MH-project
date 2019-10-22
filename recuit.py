@@ -20,7 +20,7 @@ def contrainteCapt(solution, Acapt):
     violationCapt = np.where(Scapt > 0, 0, 1)
     return violationCapt
 
-def contrainteCom(solution, Acom):
+def contrainteCom(solution, Acom, NeighCom):
     n = len(solution)
     assert(solution[0] == 1)
 
@@ -29,18 +29,18 @@ def contrainteCom(solution, Acom):
     file = [0]
 
     while len(file) > 0:
-        i = file[0]
-        file = file[1:]
-        for j in range(n):
+        i = file.pop(0)
+        v = NeighCom[i][1]
+        for j in v:
             if (violationCom[j] == 1) and (Acom[i, j] == 1):
                 violationCom[j] = 0
                 file.append(j)
 
     return violationCom
 
-def computeEnergy(solution, Acapt, Acom, coefCapt, coefCom, coefSize):
+def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
     violationCapt = contrainteCapt(solution, Acapt)
-    violationCom = contrainteCom(solution, Acom)
+    violationCom = contrainteCom(solution, Acom, NeighCom)
     energy = coefCapt*np.sum(violationCapt) + \
              coefCom*np.sum(violationCom) + \
              coefSize*np.sum(solution)
@@ -69,8 +69,8 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
     bestScore = np.sum(bestSolution)
-    bestEnergy = computeEnergy(bestSolution, Acapt, Acom, coefCapt, coefCom, \
-                               coefSize)
+    bestEnergy = computeEnergy(
+        bestSolution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
     
     solution = np.copy(bestSolution)
     score = bestScore
@@ -88,8 +88,8 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     it = 0
     while it < maxIter:
         solBis = V1(solution)
-        energyBis = computeEnergy(solBis, Acapt, Acom, coefCapt, coefCom, \
-                                  coefSize)
+        energyBis = computeEnergy(
+            solBis, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
         if energyBis < energy:
             solution = solBis
             energy = energyBis
