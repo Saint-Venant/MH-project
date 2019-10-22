@@ -65,13 +65,19 @@ def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
     E = coefCapt*(number of capt constraints unrespected) +
         coefCom*(number of com constraints unrespected) +
         coefSize*(number of vertices in the solution)
+
+    Return:
+        - energy
+        - ok : * True if solution is feasbible
+               * False otherwise
     '''
     violationCapt = contrainteCapt(solution, Acapt)
     violationCom = contrainteCom(solution, Acom, NeighCom)
-    energy = coefCapt*np.sum(violationCapt) + \
-             coefCom*np.sum(violationCom) + \
-             coefSize*np.sum(solution)
-    return energy
+    sCapt = np.sum(violationCapt)
+    sCom = np.sum(violationCom)
+    energy = coefCapt*sCapt + coefCom*sCom + coefSize*np.sum(solution)
+    ok = (sCapt == 0) and (sCom == 0)
+    return energy, ok
 
 def V1(solution):
     '''
@@ -116,8 +122,9 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
     bestScore = np.sum(bestSolution)
-    bestEnergy = computeEnergy(
+    bestEnergy, ok = computeEnergy(
         bestSolution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
+    assert(ok)
     
     solution = np.copy(bestSolution)
     score = bestScore
@@ -135,7 +142,7 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     it = 0
     while it < maxIter:
         solBis = V1(solution)
-        energyBis = computeEnergy(
+        energyBis, okBis = computeEnergy(
             solBis, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
         if energyBis < energy:
             solution = solBis
