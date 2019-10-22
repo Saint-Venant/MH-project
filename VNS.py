@@ -97,6 +97,90 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom):
 
     return solBis, improved
 
+def greedyPivot2(solution, Acapt, Acom, NeighCom):
+    '''
+    For a given solution, test if this move if possible :
+        - Select 1 empty vertex + another in its com neighborhood
+        - Try to delete 3 vertices in their neighborhood
+    '''
+    solBis = np.copy(solution)
+    indexEmpty = np.where(solution == 0)[0]
+    nEmpty = indexEmpty.shape[0]
+    assert(nEmpty > 0)
+    nNodes = solution.shape[0]
+
+    np.random.shuffle(indexEmpty)
+    ind_i1 = 0
+    improved = False
+    while not(improved) and (ind_i1 < nEmpty):
+        i1 = indexEmpty[ind_i1]
+        v_i1 = NeighCom[i1][1].copy()
+        np.random.shuffle(v_i1)
+        assert(len(v_i1) > 0)
+
+        ind_i2 = 0
+        while not(improved) and (ind_i2 < len(v_i1)):
+            i2 = v_i1[ind_i2]
+
+            if (i2 > i1) and (solBis[i2] == 0):
+                v_i2 = NeighCom[i2][1].copy()
+                np.random.shuffle(v_i2)
+                solBis[i1] = 1
+                solBis[i2] = 1
+
+                # candidates to be deleted
+                markedCandidates = np.zeros(nNodes, dtype=np.int)
+                markedCandidates[0] = 1
+                markedCandidates[i1] = 1
+                markedCandidates[i2] = 1
+                candidates = [i1, i2]
+                for j in v_i1+v_i2:
+                    if markedCandidates[j] == 0:
+                        markedCandidates[j] = 1
+                        if solBis[j] == 1:
+                            candidates.append(j)
+                nCandidates = len(candidates)
+
+                # find 3 vertices to delete
+                np.random.shuffle(candidates)
+                ind1 = 0
+                ind2 = 1
+                ind3 = 2
+                while not(improved) and (ind3 < nCandidates):
+                    j1 = candidates[ind1]
+                    j2 = candidates[ind2]
+                    j3 = candidates[ind3]
+                    solBis[j1] = 0
+                    solBis[j2] = 0
+                    solBis[j3] = 0
+                    improved = constraints.checkConstraints(
+                        solBis, Acapt, Acom, NeighCom)
+                    if not(improved):
+                        solBis[j1] = 1
+                        solBis[j2] = 1
+                        solBis[j3] = 1
+                        if ind3 < nCandidates - 1:
+                            ind3 += 1
+                        elif ind2 < nCandidates - 2:
+                            ind2 += 1
+                            ind3 = ind2 + 1
+                        else:
+                            ind1 += 1
+                            ind2 = ind1 + 1
+                            ind3 = ind2 + 1
+
+                if not(improved):
+                    solBis[i1] = 0
+                    solBis[i2] = 0
+
+            ind_i2 += 1
+
+        # Try another pivot if the solution cannot be improved
+        if not(improved):
+            ind_i1 += 1
+
+    return solBis, improved
+
 def greedyPivotS1(solution, Acapt, Acom, NeighCom):
     '''
     For a given solution, test if this move is possible:
@@ -186,7 +270,7 @@ def VNS(instanceName, Rcapt, Rcom):
     score = np.sum(solution)
 
     # iterations over neighborhoods
-    neighborhoods = [greedyDelete, greedyPivot1, greedyPivotS1]
+    neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
     descent = True
     ind = 0
     while ind < len(neighborhoods):
@@ -199,7 +283,7 @@ def VNS(instanceName, Rcapt, Rcom):
         else:
             ind += 1
     
-    return score
+    return solution, score
 
 
 if __name__ == '__main__':
@@ -208,18 +292,19 @@ if __name__ == '__main__':
     instanceName = 'Instances/captANOR225_9_20.dat'
 
     t1 = time.time()
-    score = VNS(instanceName, Rcapt, Rcom)
+    solution, score = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
     print('score : {}'.format(score))
     print('\ndt : {}\n'.format(t2-t1))
-    '''
+    
     vectScore = []
     t1 = time.time()
-    for i in range(100):
-        score = VNS(instanceName, Rcapt, Rcom)
+    for i in range(1):
+        print(i)
+        solution, score = VNS(instanceName, Rcapt, Rcom)
         vectScore.append(score)
     t2 = time.time()
     print('score mean : {}'.format(np.mean(vectScore)))
     print('score min : {}\n'.format(np.min(vectScore)))
     print(t2 - t1)
-    '''
+    
