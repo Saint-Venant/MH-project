@@ -1,3 +1,14 @@
+'''
+On représente une solution par un vecteur de taille n (nombre de sommets):
+    - sol[i] = 1 si cible i reçoit un capteur
+    - sol[i] = 0 sinon
+
+In this file:
+    - Acapt : matrix of adjacency in the capt graph
+    - Acom : matrix of adjacency in the com graph
+    - NeighCapt : list of neighbors of each vertex in capt graph
+    - NeighCom : list of neighbors of each vertex in com graph
+'''
 import numpy as np
 import time
 
@@ -12,6 +23,9 @@ def greedyDelete(solution, Acapt, Acom):
         
 
 def VNS(instanceName, Rcapt, Rcom):
+    '''
+    Implement VNS metaheuristic
+    '''
     # parse data
     Acapt, Acom, NeighCapt, NeighCom = parserInstance.parseData(
         instanceName, Rcapt, Rcom)
