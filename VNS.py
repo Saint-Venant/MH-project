@@ -41,7 +41,7 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom):
     '''
     For a given solution, test if this move if possible :
         Select an empty vertex
-        Try to delete as many other vertices as possible
+        Try to delete 2 other vertices in its neighborhood
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
@@ -90,6 +90,77 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom):
 
     return solBis, improved
 
+def greedyPivotS1(solution, Acapt, Acom, NeighCom):
+    '''
+    For a given solution, test if this move is possible:
+        - select an ampty vertex i
+        - insert this vertex + all its neighbors in NeighCom
+        - try N=100 stochastic descent using deletion of vertices
+    '''
+    N = 5
+    nNodes = solution.shape[0]
+    
+    solBis = np.copy(solution)
+    indexEmpty = np.where(solution == 0)[0]
+    nEmpty = indexEmpty.shape[0]
+    assert(nEmpty > 0)
+    score = np.sum(solBis)
+    print('nEmpty : {}\n'.format(nEmpty))
+
+    np.random.shuffle(indexEmpty)
+    ind = 0
+    improved = False
+    while not(improved) and (ind < nEmpty):
+        i = indexEmpty[ind]
+        print(i)
+
+        # insert i and its empty neighbors
+        v = NeighCom[i][1].copy()
+        inserted = [i] + [j for j in v if (solBis[j] == 0)]
+        solBis[inserted] = 1
+        print('nInserted : {}'.format(len(inserted)))
+
+        # candidates to be deleted
+        markedCandidates = np.zeros(nNodes, dtype=np.int)
+        markedCandidates[0] = 1
+        markedCandidates[i] = 1
+        candidates = [i]
+        for j in v:
+            if markedCandidates[j] == 0:
+                markedCandidates[j] = 1
+                candidates.append(j)
+            v_j = NeighCom[j][1]
+            for k in v_j:
+                if markedCandidates[k] == 0:
+                    markedCandidates[k] = 1
+                    candidates.append(k)
+        print('nCandidates : {}'.format(len(candidates)))
+
+        # try to improve to improve as much as possible the solution by
+        # successive deletions among the pre-selected candidates
+        it = 0
+        while not(improved) and (it < N):
+            print('  > it = {}'.format(it))
+            solTer = np.copy(solBis)
+            descent = True
+            while descent:
+                solTer, descent = greedyDelete(solTer, Acapt, Acom, NeighCom)
+                scoreTer = np.sum(solTer)
+            if scoreTer < score:
+                improved = True
+            else:
+                it += 1
+
+        if not(improved):
+            ind += 1
+            solBis[inserted] = 0
+
+    if improved:
+        solBis = solTer
+
+    return solBis, improved
+            
+
 def VNS(instanceName, Rcapt, Rcom):
     '''
     Implement VNS metaheuristic
@@ -107,7 +178,7 @@ def VNS(instanceName, Rcapt, Rcom):
     score = np.sum(solution)
 
     # iterations over neighborhoods
-    neighborhoods = [greedyDelete, greedyPivot1]
+    neighborhoods = [greedyDelete, greedyPivot1, greedyPivotS1]
     descent = True
     ind = 0
     while ind < len(neighborhoods):
@@ -133,7 +204,7 @@ if __name__ == '__main__':
     t2 = time.time()
     print('score : {}'.format(score))
     print('\ndt : {}\n'.format(t2-t1))
-    
+    '''
     vectScore = []
     t1 = time.time()
     for i in range(100):
@@ -143,4 +214,4 @@ if __name__ == '__main__':
     print('score mean : {}'.format(np.mean(vectScore)))
     print('score min : {}\n'.format(np.min(vectScore)))
     print(t2 - t1)
-    
+    '''
