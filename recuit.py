@@ -5,6 +5,12 @@ de bonne qualité
 On représente une solution par un vecteur de taille n (nombre de cibles):
     - sol[i] = 1 si cible 1 reçoit un capteur
     - sol[i] = 0 sinon
+
+In this file:
+    - Acapt : matrix of adjacency in the capt graph
+    - Acom : matrix of adjacency in the com graph
+    - NeighCapt : list of neighbors of each vertex in capt graph
+    - NeighCom : list of neighbors of each vertex in com graph
 '''
 import numpy as np
 import time
@@ -13,6 +19,13 @@ import parserInstance
 
 
 def contrainteCapt(solution, Acapt):
+    '''
+    Return a list v of n elements where:
+        - n = number of vertices
+        - v_i = * 0 if capt constraint is respected for vertex i
+                * 1 otherwise
+    '''
+    solution
     assert(solution[0] == 1)
 
     indexSelected = np.where(solution == 1)[0]
@@ -21,10 +34,16 @@ def contrainteCapt(solution, Acapt):
     return violationCapt
 
 def contrainteCom(solution, Acom, NeighCom):
+    '''
+    Return a list v of n elements where:
+        - n = number of vertices
+        - v_i = * 0 if com constraint is respected for vertex i
+                * 1 otherwise
+    '''
     n = len(solution)
     assert(solution[0] == 1)
 
-    violationCom = np.ones(n, dtype=np.int)
+    violationCom = np.copy(solution)
     violationCom[0] = 0
     file = [0]
 
@@ -39,6 +58,14 @@ def contrainteCom(solution, Acom, NeighCom):
     return violationCom
 
 def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
+    '''
+    Given a certain solution (maybe not admissible), compute the energy function
+    for the recuit
+
+    E = coefCapt*(number of capt constraints unrespected) +
+        coefCom*(number of com constraints unrespected) +
+        coefSize*(number of vertices in the solution)
+    '''
     violationCapt = contrainteCapt(solution, Acapt)
     violationCom = contrainteCom(solution, Acom, NeighCom)
     energy = coefCapt*np.sum(violationCapt) + \
@@ -47,6 +74,9 @@ def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
     return energy
 
 def V1(solution):
+    '''
+    Neighbor fuction 1 : Hamming-distance = 1
+    '''
     n = len(solution)
     solBis = np.copy(solution)
     i = np.random.randint(1, n)
@@ -54,6 +84,20 @@ def V1(solution):
     return solBis
 
 def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
+    '''
+    Run a recuit simulé
+
+    maxIter : stop criteria
+    coefCapt, coefCom, coefSize : coefficients for the energy function
+
+    T0 : initial temperature
+    T : temperature at each iteration
+    T_(it+1) = alpha * T_(it)
+
+    Return:
+        - bestsolution : best solution encountered for the energy
+        - vectScore : score of the solution at each iteration
+    '''
     # parse data
     Acapt, Acom, NeighCapt, NeighCom = parserInstance.parseData(
         instanceName, Rcapt, Rcom)
