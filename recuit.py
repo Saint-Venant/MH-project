@@ -104,7 +104,7 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
             * inf if solution if not feasible
 
     Return:
-        - bestsolution : best solution encountered for the energy
+        - bestsolution : best solution encountered for the score
         - vectScore : score of the solution at each iteration
     '''
     # parse data
@@ -147,19 +147,22 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
         if energyBis < energy:
             solution = solBis
             energy = energyBis
+            ok = okBis
         else:
             delta = energyBis - energy
             proba = np.exp(-delta/T)
             if np.random.random() < proba:
                 solution = solBis
                 energy = energyBis
+                ok = okBis
 
         if energy < bestEnergy:
             bestEnergy = energy
-            bestSolution = solution
-        score = np.sum(solution)
-        if score < bestScore:
-            bestScore = score
+        if ok:
+            score = np.sum(solution)
+            if score < bestScore:
+                bestScore = score
+                bestSolution = solution
 
         it += 1
         T = alpha*T
