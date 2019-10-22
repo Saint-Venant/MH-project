@@ -52,3 +52,13 @@ def contrainteCom(solution, Acom, NeighCom):
                 file.append(j)
 
     return violationCom
+
+def checkConstraints(solution, Acapt, Acom, NeighCom):
+    '''
+    For a given solution, checks whether or not the constraints are respected
+    '''
+    violationCapt = constraints.contrainteCapt(solution, Acapt)
+    violationCom = constraints.contrainteCom(solution, Acom, NeighCom)
+    sCapt = np.sum(violationCapt)
+    sCom = np.sum(violationCom)
+    return (sCapt == 0) and (sCom == 0)
