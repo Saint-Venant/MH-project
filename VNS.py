@@ -16,12 +16,19 @@ import parserInstance
 import constraints
 
 
-def greedyDelete(solution, Acapt, Acom, NeighCom):
+def greedyDelete(solution, Acapt, Acom, NeighCom, candidates=None):
     '''
     For a given solution, delete 1 vertex if possible (remains feasible)
+
+    When candidates are specified, only consider vertices in candidates for
+    deletion
     '''
     solBis = np.copy(solution)
-    indexSelected = np.where(solution == 1)[0][1:]
+    if candidates == None:
+        indexSelected = np.where(solution == 1)[0][1:]
+    else:
+        indexSelected = np.array(candidates)
+        #print(indexSelected)
     nSelected = indexSelected.shape[0]
     assert(nSelected > 0)
 
@@ -144,7 +151,8 @@ def greedyPivotS1(solution, Acapt, Acom, NeighCom):
             solTer = np.copy(solBis)
             descent = True
             while descent:
-                solTer, descent = greedyDelete(solTer, Acapt, Acom, NeighCom)
+                solTer, descent = greedyDelete(
+                    solTer, Acapt, Acom, NeighCom, candidates=candidates)
                 scoreTer = np.sum(solTer)
             if scoreTer < score:
                 improved = True
