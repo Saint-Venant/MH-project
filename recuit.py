@@ -94,6 +94,9 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     T : temperature at each iteration
     T_(it+1) = alpha * T_(it)
 
+    score = * number of vertices in the solution if feasible
+            * inf if solution if not feasible
+
     Return:
         - bestsolution : best solution encountered for the energy
         - vectScore : score of the solution at each iteration
