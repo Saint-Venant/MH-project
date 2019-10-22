@@ -106,25 +106,21 @@ def VNS(instanceName, Rcapt, Rcom):
     assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
     score = np.sum(solution)
 
-    # iterations neighborhood 1
+    # iterations over neighborhoods
+    neighborhoods = [greedyDelete, greedyPivot1]
     descent = True
-    while descent:
-        solution, descent = greedyDelete(solution, Acapt, Acom, NeighCom)
+    ind = 0
+    while ind < len(neighborhoods):
+        V = neighborhoods[ind]
+        solution, descent = V(solution, Acapt, Acom, NeighCom)
         score = np.sum(solution)
         assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
-    score1 = score
-
-    # iterations neighborhood 2
-    descent = True
-    while descent:
-        solution, descent = greedyPivot1(solution, Acapt, Acom, NeighCom)
-        score = np.sum(solution)
-    assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
-    score2 = score
-
+        if descent:
+            ind = 0
+        else:
+            ind += 1
     
-
-    return score1, score2
+    return score
 
 
 if __name__ == '__main__':
@@ -133,23 +129,18 @@ if __name__ == '__main__':
     instanceName = 'Instances/captANOR225_9_20.dat'
 
     t1 = time.time()
-    score1, score2 = VNS(instanceName, Rcapt, Rcom)
+    score = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
-    print('score1 : {}'.format(score1))
-    print('score2 : {}'.format(score2))
+    print('score : {}'.format(score))
     print('\ndt : {}\n'.format(t2-t1))
-
-    vectScore1 = []
-    vectScore2 = []
+    
+    vectScore = []
     t1 = time.time()
     for i in range(100):
-        score1, score2 = VNS(instanceName, Rcapt, Rcom)
-        vectScore1.append(score1)
-        vectScore2.append(score2)
+        score = VNS(instanceName, Rcapt, Rcom)
+        vectScore.append(score)
     t2 = time.time()
-    print('score1 mean : {}'.format(np.mean(vectScore1)))
-    print('score1 min : {}\n'.format(np.min(vectScore1)))
-    print('score2 mean : {}'.format(np.mean(vectScore2)))
-    print('score2 min : {}\n'.format(np.min(vectScore2)))
+    print('score mean : {}'.format(np.mean(vectScore)))
+    print('score min : {}\n'.format(np.min(vectScore)))
     print(t2 - t1)
     
