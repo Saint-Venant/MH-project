@@ -32,8 +32,8 @@ def make_Neigh(Adj):
     Neigh = []
     for i in range(n):
         v = np.where(Adj[i, :] == 1)[0]
-        v = v[v != i]
-        Neigh.append([v.shape[0], v])
+        v = list(v[v != i])
+        Neigh.append([len(v), v])
     return Neigh
 
 def parseData(instanceName, Rcapt, Rcom):
