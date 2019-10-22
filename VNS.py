@@ -21,7 +21,7 @@ def greedyDelete(solution, Acapt, Acom, NeighCom):
     For a given solution, delete 1 vertex if possible (remains feasible)
     '''
     solBis = np.copy(solution)
-    indexSelected = np.where(solution == 1)[0]
+    indexSelected = np.where(solution == 1)[0][1:]
     nSelected = indexSelected.shape[0]
     assert(nSelected > 0)
 
@@ -47,6 +47,29 @@ def VNS(instanceName, Rcapt, Rcom):
     nNodes = Acapt.shape[0]
 
     # parameters
-    
 
+    # initialization
+    solution = np.ones(nNodes, dtype=np.int)
+    assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
+    score = np.sum(solution)
+
+    # iterations
+    descent = True
+    while descent:
+        solution, descent = greedyDelete(solution, Acapt, Acom, NeighCom)
+        score = np.sum(solution)
+
+    return score
+
+
+if __name__ == '__main__':
+    Rcapt = 1
+    Rcom = 2
+    instanceName = 'Instances/captANOR225_9_20.dat'
+
+    t1 = time.time()
+    score = VNS(instanceName, Rcapt, Rcom)
+    t2 = time.time()
+    print('score : {}'.format(score))
+    print('\ndt : {}'.format(t2-t1))
     
