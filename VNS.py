@@ -8,20 +8,53 @@ In this file:
     - Acom : matrix of adjacency in the com graph
     - NeighCapt : list of neighbors of each vertex in capt graph
     - NeighCom : list of neighbors of each vertex in com graph
+
+Heuristics:
+    * speedCapt : only consider candidates for deletion that have at least
+                  one nother vertex selected in their Capt neighborhood
+                  (heuristic only relevant for Rcapt < Rcom)
+    * nearSearch : when searching for an improving solution, tend to favor
+                   neighbors of the previous pivot(s)
 '''
 import numpy as np
 import time
 
 import parserInstance
-'''
-Heuristics:
-    * speedCapt : only consider candidates for deletion that have at least
-                  one nother vertex selected in their Capt neighborhood
-                  (heuristic only relevant for Rcapt < Rcom)
-'''
 
 import constraints
 
+
+def heurNearSearch(candidatesInsert, pivots, Acapt, Acom, param):
+    '''
+    candidatesInsert : list of (empty) vertices, for which insertion will be
+                       considered
+    pivots : list of pivots (vertices inserted in the previous local search)
+    param : 1 -> correspond to candidatesInsert for greedyPivot1
+            2 -> correspond to candidatesInsert for greedyPivot2
+
+    Return a list of elements in candidatesInsert, reordered in a way that
+    vertices in the Com neighborhood of the pivots will be tested first
+    '''
+    assert(param in [1])
+    nNodes = Acapt.shape[0]
+    first = []
+    second = []
+
+    if param == 0:
+        markedCandidates = np.ones((nNodes, nNodes), dtype=np.int)
+        markedCandidates[candidatesInsert] = 0
+        for i in pivots:
+            v = NeighCom[i][1]
+            for j in v:
+                if markedCandidates[j] == 0:
+                    markedCandidates[j] = 1
+                    first.append(j)
+        second = list(np.where(markedCandidates == 0)[0])
+
+    np.random.shuffle(first)
+    np.random.shuffle(second)
+    orderedCandidates = np.array(first+second)
+    return orderedCandidates
 
 def greedyDelete(solution, Acapt, Acom, NeighCom, givenCandidates=None, \
                  speedCapt=True):
