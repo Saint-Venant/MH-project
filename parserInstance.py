@@ -41,6 +41,7 @@ def make_Adj(instance, R, adjType='Com'):
     la solution à contenir le puits tout en s'assurant qu'il ne puisse rien
     capter
     '''
+    assert(adj in ['Capt', 'Com'])
     n = len(instance)
     Adj = np.zeros((n,n), dtype=np.int)
     for i in range(n):
@@ -79,8 +80,8 @@ def parseData(instanceName, Rcapt, Rcom):
     Compute matrices of adjacency and lists of neigbors
     '''
     instance = readInstance(instanceName)
-    Acapt = make_Adj(instance, Rcapt)
-    Acom = make_Adj(instance, Rcom)
+    Acapt = make_Adj(instance, Rcapt, adjType='Capt')
+    Acom = make_Adj(instance, Rcom, adjType='Com')
     NeighCapt = make_Neigh(Acapt)
     NeighCom = make_Neigh(Acom)
     return Acapt, Acom, NeighCapt, NeighCom
