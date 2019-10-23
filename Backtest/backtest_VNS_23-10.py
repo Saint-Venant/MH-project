@@ -34,6 +34,7 @@ for instanceName in instanceNames:
         print('instanceName : {}'.format(instanceName))
         print('Rcapt : {} ; Rcom : {}'.format(Rcapt, Rcom))
         print('  > score = {}'.format(score))
+        print('  > dt = {}'.format(t2 - t1))
         print()
 
 
