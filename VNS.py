@@ -195,7 +195,7 @@ def greedyPivotS1(solution, Acapt, Acom, NeighCom):
     indexEmpty = np.where(solution == 0)[0]
     nEmpty = indexEmpty.shape[0]
     assert(nEmpty > 0)
-    score = np.sum(solBis)
+    score = np.sum(solBis) - 1
     print('nEmpty : {}\n'.format(nEmpty))
 
     np.random.shuffle(indexEmpty)
@@ -237,7 +237,7 @@ def greedyPivotS1(solution, Acapt, Acom, NeighCom):
             while descent:
                 solTer, descent = greedyDelete(
                     solTer, Acapt, Acom, NeighCom, candidates=candidates)
-                scoreTer = np.sum(solTer)
+                scoreTer = np.sum(solTer) - 1
             if scoreTer < score:
                 improved = True
             else:
@@ -269,7 +269,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     # initialization
     solution = np.ones(nNodes, dtype=np.int)
     assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
-    score = np.sum(solution)
+    score = np.sum(solution) - 1
 
     # iterations over neighborhoods
     neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
@@ -279,7 +279,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     while (ind < len(neighborhoods)) and (dt < dtMax):
         V = neighborhoods[ind]
         solution, descent = V(solution, Acapt, Acom, NeighCom)
-        score = np.sum(solution)
+        score = np.sum(solution) - 1
         assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
         if descent:
             ind = 0
