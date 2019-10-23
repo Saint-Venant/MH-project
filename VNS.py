@@ -253,10 +253,12 @@ def greedyPivotS1(solution, Acapt, Acom, NeighCom):
     return solBis, improved
             
 
-def VNS(instanceName, Rcapt, Rcom):
+def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     '''
     Implement VNS metaheuristic
     '''
+    t1 = time.time()
+    
     # parse data
     Acapt, Acom, NeighCapt, NeighCom = parserInstance.parseData(
         instanceName, Rcapt, Rcom)
@@ -273,7 +275,8 @@ def VNS(instanceName, Rcapt, Rcom):
     neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
     descent = True
     ind = 0
-    while ind < len(neighborhoods):
+    dt = time.time() - t1
+    while (ind < len(neighborhoods)) and (dt < dtMax):
         V = neighborhoods[ind]
         solution, descent = V(solution, Acapt, Acom, NeighCom)
         score = np.sum(solution)
