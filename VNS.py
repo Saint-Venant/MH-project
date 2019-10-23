@@ -13,6 +13,13 @@ import numpy as np
 import time
 
 import parserInstance
+'''
+Heuristics:
+    * speedCapt : only consider candidates for deletion that have at least
+                  one nother vertex selected in their Capt neighborhood
+                  (heuristic only relevant for Rcapt < Rcom)
+'''
+
 import constraints
 
 
@@ -23,9 +30,6 @@ def greedyDelete(solution, Acapt, Acom, NeighCom, givenCandidates=None, \
 
     When candidates are specified, only consider vertices in candidates for
     deletion
-
-    speedCapt : only consider candidates for deletion that a capted by at least
-                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
     if givenCandidates == None:
@@ -56,9 +60,6 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom, speedCapt=True):
     For a given solution, test if this move is possible :
         - Select an empty vertex
         - Try to delete 2 other vertices in its neighborhood
-
-    speedCapt : only consider candidates for deletion that a capted by at least
-                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
@@ -117,9 +118,6 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
     For a given solution, test if this move if possible :
         - Select 1 empty vertex + another in its com neighborhood
         - Try to delete 3 vertices in their neighborhood
-
-    speedCapt : only consider candidates for deletion that a capted by at least
-                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
