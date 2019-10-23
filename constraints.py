@@ -56,8 +56,11 @@ def checkConstraints(solution, Acapt, Acom, NeighCom):
     '''
     For a given solution, checks whether or not the constraints are respected
     '''
-    violationCapt = contrainteCapt(solution, Acapt)
     violationCom = contrainteCom(solution, Acom, NeighCom)
-    sCapt = np.sum(violationCapt)
     sCom = np.sum(violationCom)
-    return (sCapt == 0) and (sCom == 0)
+    ok = (sCom == 0)
+    if ok:
+        violationCapt = contrainteCapt(solution, Acapt)
+        sCapt = np.sum(violationCapt)
+        ok = (sCapt == 0)
+    return ok
