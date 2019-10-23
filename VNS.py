@@ -285,6 +285,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
             ind = 0
         else:
             ind += 1
+        dt = time.time() - t1
     
     return solution, score
 
