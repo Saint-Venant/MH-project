@@ -21,7 +21,6 @@ def contrainteCapt(solution, Acapt):
         - v_i = * 0 if capt constraint is respected for vertex i
                 * 1 otherwise
     '''
-    solution
     assert(solution[0] == 1)
 
     indexSelected = np.where(solution == 1)[0]

@@ -38,7 +38,8 @@ def computeEnergy(solution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize):
     violationCom = constraints.contrainteCom(solution, Acom, NeighCom)
     sCapt = np.sum(violationCapt)
     sCom = np.sum(violationCom)
-    energy = coefCapt*sCapt + coefCom*sCom + coefSize*np.sum(solution)
+    sSol = np.sum(solution) - 1
+    energy = coefCapt*sCapt + coefCom*sCom + coefSize*sSol
     ok = (sCapt == 0) and (sCom == 0)
     return energy, ok
 
@@ -63,7 +64,7 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     T : temperature at each iteration
     T_(it+1) = alpha * T_(it)
 
-    score = * number of vertices in the solution if feasible
+    score = * number of vertices in the solution if feasible (except 0)
             * inf if solution if not feasible
 
     Return:
@@ -84,7 +85,7 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
     
     # initialisation
     bestSolution = np.ones(nNodes, dtype=np.int)
-    bestScore = np.sum(bestSolution)
+    bestScore = np.sum(bestSolution) - 1
     bestEnergy, ok = computeEnergy(
         bestSolution, Acapt, Acom, NeighCom, coefCapt, coefCom, coefSize)
     assert(ok)
@@ -128,7 +129,7 @@ def recuit(instanceName, Rcapt, Rcom, maxIter=10**4, verbose=False):
         if energy < bestEnergy:
             bestEnergy = energy
         if ok:
-            score = np.sum(solution)
+            score = np.sum(solution) - 1
         else:
             score = np.inf
         if score < bestScore:
