@@ -24,7 +24,7 @@ import parserInstance
 import constraints
 
 
-def heurNearSearch(candidatesInsert, pivots, Acapt, Acom, param):
+def heurNearSearch(candidatesInsert, pivots, NeighCapt, NeighCom, param):
     '''
     candidatesInsert : list of (empty) vertices, for which insertion will be
                        considered
@@ -35,13 +35,13 @@ def heurNearSearch(candidatesInsert, pivots, Acapt, Acom, param):
     Return a list of elements in candidatesInsert, reordered in a way that
     vertices in the Com neighborhood of the pivots will be tested first
     '''
-    assert(param in [1])
-    nNodes = Acapt.shape[0]
+    assert(param in [1, 2])
+    nNodes = len(NeighCapt)
     first = []
     second = []
 
-    if param == 0:
-        markedCandidates = np.ones((nNodes, nNodes), dtype=np.int)
+    if (param == 1) or (param == 2):
+        markedCandidates = np.ones(nNodes, dtype=np.int)
         markedCandidates[candidatesInsert] = 0
         for i in pivots:
             v = NeighCom[i][1]
@@ -56,8 +56,9 @@ def heurNearSearch(candidatesInsert, pivots, Acapt, Acom, param):
     orderedCandidates = np.array(first+second)
     return orderedCandidates
 
-def greedyDelete(solution, Acapt, Acom, NeighCom, givenCandidates=None, \
-                 speedCapt=True):
+def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
+                 givenCandidates=None, \
+                 speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, delete 1 vertex if possible (remains feasible)
 
@@ -86,9 +87,16 @@ def greedyDelete(solution, Acapt, Acom, NeighCom, givenCandidates=None, \
         if not(feasible):
             solBis[i] = 1
             ind += 1
-    return solBis, feasible
 
-def greedyPivot1(solution, Acapt, Acom, NeighCom, speedCapt=True):
+    if (nearSearch[0]) and not(feasible):
+        pivots = nearSearch[1]
+    else:
+        pivots = []
+        
+    return solBis, feasible, pivots
+
+def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
+                 speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move is possible :
         - Select an empty vertex
@@ -99,7 +107,14 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom, speedCapt=True):
     nEmpty = indexEmpty.shape[0]
     assert(nEmpty > 0)
 
-    np.random.shuffle(indexEmpty)
+    # order of exploration
+    if nearSearch[0]:
+        pivots = nearSearch[1]
+        assert(len(pivots) > 0)
+        indexEmpty = heurNearSearch(indexEmpty, pivots, NeighCapt, NeighCom, 1)
+    else:
+        np.random.shuffle(indexEmpty)
+    
     ind = 0
     improved = False
     while not(improved) and (ind < nEmpty):
@@ -144,9 +159,17 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom, speedCapt=True):
         else:
             improved = True
 
-    return solBis, improved
+    if improved:
+        pivots = [i]
+    elif nearSearch[0]:
+        pivots = nearSearch[1]
+    else:
+        pivots = []
+        
+    return solBis, improved, pivots
 
-def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
+def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
+                 speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move if possible :
         - Select 1 empty vertex + another in its com neighborhood
@@ -158,12 +181,22 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
     assert(nEmpty > 0)
     nNodes = solution.shape[0]
 
-    np.random.shuffle(indexEmpty)
+    # order of exploration
+    if nearSearch[0]:
+        pivots = nearSearch[1]
+        assert(len(pivots) > 0)
+        indexEmpty = heurNearSearch(indexEmpty, pivots, NeighCapt, NeighCom, 2)
+    else:
+        np.random.shuffle(indexEmpty)
+
+    # mark explored pairs
+    markedPairs = np.zeros((nNodes, nNodes), dtype=np.int)
+    markedPairs[np.arange(nNodes), np.arange(nNodes)] = 1
+
     ind_i1 = 0
     improved = False
     while not(improved) and (ind_i1 < nEmpty):
         i1 = indexEmpty[ind_i1]
-        print(i1)
         v_i1 = NeighCom[i1][1].copy()
         np.random.shuffle(v_i1)
         assert(len(v_i1) > 0)
@@ -172,7 +205,7 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
         while not(improved) and (ind_i2 < len(v_i1)):
             i2 = v_i1[ind_i2]
 
-            if (i2 > i1) and (solBis[i2] == 0):
+            if (markedPairs[i1, i2] == 0) and (solBis[i2] == 0):
                 v_i2 = NeighCom[i2][1].copy()
                 np.random.shuffle(v_i2)
                 solBis[i1] = 1
@@ -232,15 +265,25 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
                     solBis[i1] = 0
                     solBis[i2] = 0
 
+                markedPairs[i1, i2] = 1
+                markedPairs[i2, i1] = 1
+
             ind_i2 += 1
 
         # Try another pivot if the solution cannot be improved
         if not(improved):
             ind_i1 += 1
 
-    return solBis, improved
+    if improved:
+        pivots = [i1, i2]
+    elif nearSearch[0]:
+        pivots = nearSearch[1]
+    else:
+        pivots = []
 
-def greedyPivotS1(solution, Acapt, Acom, NeighCom):
+    return solBis, improved, pivots
+
+def greedyPivotS1(solution, Acapt, Acom, NeighCapt, NeighCom):
     '''
     For a given solution, test if this move is possible:
         - select an ampty vertex i
@@ -335,29 +378,28 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 
     # iterations over neighborhoods
     neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
-    #neighborhoods = [greedyDelete, greedyPivot1]
     descent = True
     ind = 0
+    nearSearch = [False, []]
     dt = time.time() - t1
     while (ind < len(neighborhoods)) and (dt < dtMax):
         V = neighborhoods[ind]
-        solution, descent = V(solution, Acapt, Acom, NeighCom, \
-                              speedCapt=speedCapt)
+        solution, descent, pivots = V(
+            solution, Acapt, Acom, NeighCapt, NeighCom, \
+            speedCapt=speedCapt, nearSearch=nearSearch)
         scoreNew = np.sum(solution) - 1
         assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
         assert(((scoreNew < score) and descent) or \
                ((scoreNew == score) and not(descent)))
-        if scoreNew < score:
-            assert(descent)
-        elif scoreNew == score:
-            assert(not(descent))
-        else:
-            assert(False)
         score = scoreNew
         if descent:
             ind = 0
         else:
             ind += 1
+        if len(pivots) == 0:
+            nearSearch = [False, []]
+        else:
+            nearSearch = [True, pivots]
         dt = time.time() - t1
     
     return solution, score
