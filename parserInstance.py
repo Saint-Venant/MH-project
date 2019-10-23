@@ -28,13 +28,18 @@ def distance2(a, b):
     dist = np.sqrt((a[1] - b[1])**2 + (a[2] - b[2])**2)
     return dist
 
-def make_Adj(instance, R):
+def make_Adj(instance, R, adjType='Com'):
     '''
     instance : list return by readInstance
     R : int (or float)
     
     Cette fonction fait la matrice d'adjacence telle que Adj[i,j]=1 ssi
     dist(i,j)<=R pour i et j deux sommets
+
+    Pour prendre en compte le fait que le puits ne nécessite pas d'être capté et
+    ne peut recevoir aucun capteur, on modélise cela par le fait qu'on forcera
+    la solution à contenir le puits tout en s'assurant qu'il ne puisse rien
+    capter
     '''
     n = len(instance)
     Adj = np.zeros((n,n), dtype=np.int)
@@ -42,6 +47,9 @@ def make_Adj(instance, R):
         for j in range(n):
             if distance2(instance[i], instance[j]) <= R:
                 Adj[i, j] = 1
+    if adjType == 'Capt':
+        Adj[0, 1:] = 0
+        Adj[1:, 0] = 0
     return Adj
 
 def make_Neigh(Adj):
