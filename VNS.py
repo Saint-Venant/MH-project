@@ -16,27 +16,34 @@ import parserInstance
 import constraints
 
 
-def greedyDelete(solution, Acapt, Acom, NeighCom, candidates=None):
+def greedyDelete(solution, Acapt, Acom, NeighCom, givenCandidates=None, \
+                 speedCapt=True):
     '''
     For a given solution, delete 1 vertex if possible (remains feasible)
 
     When candidates are specified, only consider vertices in candidates for
     deletion
+
+    speedCapt : only consider candidates for deletion that a capted by at least
+                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
-    if candidates == None:
+    if givenCandidates == None:
         indexSelected = np.where(solution == 1)[0][1:]
+        if speedCapt:
+            covers = np.sum(Acapt[np.ix_(indexSelected, indexSelected)], axis=0)
+            candidates = indexSelected[covers > 1]
+        else:
+            candidates = indexSelected
     else:
-        indexSelected = np.array(candidates)
-        #print(indexSelected)
-    nSelected = indexSelected.shape[0]
-    assert(nSelected > 0)
+        candidates = np.array(givenCandidates)
+    nSelected = candidates.shape[0]
 
-    np.random.shuffle(indexSelected)
+    np.random.shuffle(candidates)
     ind = 0
     feasible = False
     while not(feasible) and (ind < nSelected):
-        i = indexSelected[ind]
+        i = candidates[ind]
         solBis[i] = 0
         feasible = constraints.checkConstraints(solBis, Acapt, Acom, NeighCom)
         if not(feasible):
@@ -44,11 +51,14 @@ def greedyDelete(solution, Acapt, Acom, NeighCom, candidates=None):
             ind += 1
     return solBis, feasible
 
-def greedyPivot1(solution, Acapt, Acom, NeighCom):
+def greedyPivot1(solution, Acapt, Acom, NeighCom, speedCapt=True):
     '''
-    For a given solution, test if this move if possible :
-        Select an empty vertex
-        Try to delete 2 other vertices in its neighborhood
+    For a given solution, test if this move is possible :
+        - Select an empty vertex
+        - Try to delete 2 other vertices in its neighborhood
+
+    speedCapt : only consider candidates for deletion that a capted by at least
+                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
@@ -63,8 +73,13 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom):
         solBis[i] = 1
 
         # candidates to be deleted
-        v = NeighCom[i][1].copy()
-        candidates = [j for j in v if (solBis[j] == 1) and (j > 0)]
+        v = NeighCom[i][1]
+        if speedCapt:
+            indexSelected = np.where(solBis == 1)[0][1:]
+            candidates = [j for j in v if (solBis[j] == 1) and (j > 0) and \
+                         (np.sum(Acapt[np.ix_(indexSelected, [j])]) > 1)]
+        else:
+            candidates = [j for j in v if (solBis[j] == 1) and (j > 0)]
         nCandidates = len(candidates)
 
         # find a pair of vertices to delete
@@ -97,11 +112,14 @@ def greedyPivot1(solution, Acapt, Acom, NeighCom):
 
     return solBis, improved
 
-def greedyPivot2(solution, Acapt, Acom, NeighCom):
+def greedyPivot2(solution, Acapt, Acom, NeighCom, speedCapt=True):
     '''
     For a given solution, test if this move if possible :
         - Select 1 empty vertex + another in its com neighborhood
         - Try to delete 3 vertices in their neighborhood
+
+    speedCapt : only consider candidates for deletion that a capted by at least
+                another vertex (heuristic only relevant for Rcapt < Rcom)
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
@@ -114,6 +132,7 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom):
     improved = False
     while not(improved) and (ind_i1 < nEmpty):
         i1 = indexEmpty[ind_i1]
+        print(i1)
         v_i1 = NeighCom[i1][1].copy()
         np.random.shuffle(v_i1)
         assert(len(v_i1) > 0)
@@ -134,11 +153,20 @@ def greedyPivot2(solution, Acapt, Acom, NeighCom):
                 markedCandidates[i1] = 1
                 markedCandidates[i2] = 1
                 candidates = [i1, i2]
-                for j in v_i1+v_i2:
-                    if markedCandidates[j] == 0:
-                        markedCandidates[j] = 1
-                        if solBis[j] == 1:
-                            candidates.append(j)
+                if speedCapt:
+                    indexSelected = np.where(solBis == 1)[0][1:]
+                    for j in v_i1+v_i2:
+                        if markedCandidates[j] == 0:
+                            markedCandidates[j] = 1
+                            if (solBis[j] == 1) and \
+                               (np.sum(Acapt[np.ix_(indexSelected, [j])]) > 1):
+                                candidates.append(j)
+                else:
+                    for j in v_i1+v_i2:
+                        if markedCandidates[j] == 0:
+                            markedCandidates[j] = 1
+                            if solBis[j] == 1:
+                                candidates.append(j)
                 nCandidates = len(candidates)
 
                 # find 3 vertices to delete
@@ -266,6 +294,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 
     # parameters
 
+    # heuristics
+    speedCapt = (Rcapt < Rcom)
+
     # initialization
     solution = np.ones(nNodes, dtype=np.int)
     assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
@@ -273,14 +304,25 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 
     # iterations over neighborhoods
     neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
+    #neighborhoods = [greedyDelete, greedyPivot1]
     descent = True
     ind = 0
     dt = time.time() - t1
     while (ind < len(neighborhoods)) and (dt < dtMax):
         V = neighborhoods[ind]
-        solution, descent = V(solution, Acapt, Acom, NeighCom)
-        score = np.sum(solution) - 1
+        solution, descent = V(solution, Acapt, Acom, NeighCom, \
+                              speedCapt=speedCapt)
+        scoreNew = np.sum(solution) - 1
         assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
+        assert(((scoreNew < score) and descent) or \
+               ((scoreNew == score) and not(descent)))
+        if scoreNew < score:
+            assert(descent)
+        elif scoreNew == score:
+            assert(not(descent))
+        else:
+            assert(False)
+        score = scoreNew
         if descent:
             ind = 0
         else:
@@ -293,7 +335,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 if __name__ == '__main__':
     Rcapt = 1
     Rcom = 2
-    instanceName = 'Instances/captANOR225_9_20.dat'
+    instanceName = 'Instances/captANOR400_10_80.dat'
 
     t1 = time.time()
     solution, score = VNS(instanceName, Rcapt, Rcom)
@@ -303,7 +345,7 @@ if __name__ == '__main__':
     
     vectScore = []
     t1 = time.time()
-    for i in range(1):
+    for i in range(10):
         print(i)
         solution, score = VNS(instanceName, Rcapt, Rcom)
         vectScore.append(score)
