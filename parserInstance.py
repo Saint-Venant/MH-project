@@ -41,7 +41,7 @@ def make_Adj(instance, R, adjType='Com'):
     la solution à contenir le puits tout en s'assurant qu'il ne puisse rien
     capter
     '''
-    assert(adj in ['Capt', 'Com'])
+    assert(adjType in ['Capt', 'Com'])
     n = len(instance)
     Adj = np.zeros((n,n), dtype=np.int)
     for i in range(n):
