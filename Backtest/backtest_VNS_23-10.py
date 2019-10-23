@@ -26,7 +26,7 @@ vectResult = []
 for instanceName in instanceNames:
     for (Rcapt, Rcom) in vectR:
         t1 = time.time()
-        solution, score = VNS.VNS(instanceName, Rcapt, Rcom)
+        solution, score = VNS.VNS(instanceName, Rcapt, Rcom, dtMax=60*5)
         t2 = time.time()
         result = [instanceName, Rcapt, Rcom, solution, score, t2-t1]
         vectResult.append(result)
