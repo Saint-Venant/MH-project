@@ -418,7 +418,7 @@ if __name__ == '__main__':
     
     vectScore = []
     t1 = time.time()
-    for i in range(10):
+    for i in range(3):
         print(i)
         solution, score = VNS(instanceName, Rcapt, Rcom)
         vectScore.append(score)
