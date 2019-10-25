@@ -285,77 +285,6 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
         pivots = []
 
     return solBis, improved, pivots
-
-def greedyPivotS1(solution, Acapt, Acom, NeighCapt, NeighCom):
-    '''
-    For a given solution, test if this move is possible:
-        - select an ampty vertex i
-        - insert this vertex + all its neighbors in NeighCom
-        - try N=100 stochastic descent using deletion of vertices
-    '''
-    N = 5
-    nNodes = solution.shape[0]
-    
-    solBis = np.copy(solution)
-    indexEmpty = np.where(solution == 0)[0]
-    nEmpty = indexEmpty.shape[0]
-    assert(nEmpty > 0)
-    score = np.sum(solBis) - 1
-    print('nEmpty : {}\n'.format(nEmpty))
-
-    np.random.shuffle(indexEmpty)
-    ind = 0
-    improved = False
-    while not(improved) and (ind < nEmpty):
-        i = indexEmpty[ind]
-        print(i)
-
-        # insert i and its empty neighbors
-        v = NeighCom[i][1].copy()
-        inserted = [i] + [j for j in v if (solBis[j] == 0)]
-        solBis[inserted] = 1
-        print('nInserted : {}'.format(len(inserted)))
-
-        # candidates to be deleted
-        markedCandidates = np.zeros(nNodes, dtype=np.int)
-        markedCandidates[0] = 1
-        markedCandidates[i] = 1
-        candidates = [i]
-        for j in v:
-            if markedCandidates[j] == 0:
-                markedCandidates[j] = 1
-                candidates.append(j)
-            v_j = NeighCom[j][1]
-            for k in v_j:
-                if markedCandidates[k] == 0:
-                    markedCandidates[k] = 1
-                    candidates.append(k)
-        print('nCandidates : {}'.format(len(candidates)))
-
-        # try to improve to improve as much as possible the solution by
-        # successive deletions among the pre-selected candidates
-        it = 0
-        while not(improved) and (it < N):
-            print('  > it = {}'.format(it))
-            solTer = np.copy(solBis)
-            descent = True
-            while descent:
-                solTer, descent = greedyDelete(
-                    solTer, Acapt, Acom, NeighCom, candidates=candidates)
-                scoreTer = np.sum(solTer) - 1
-            if scoreTer < score:
-                improved = True
-            else:
-                it += 1
-
-        if not(improved):
-            ind += 1
-            solBis[inserted] = 0
-
-    if improved:
-        solBis = solTer
-
-    return solBis, improved
             
 
 def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
@@ -385,11 +314,15 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     ind = 0
     nearSearch = [False, []]
     dt = time.time() - t1
+    vectTime = np.zeros(3)
     while (ind < len(neighborhoods)) and (dt < dtMax):
         V = neighborhoods[ind]
+        z1 = time.time()
         solution, descent, pivots = V(
             solution, Acapt, Acom, NeighCapt, NeighCom, \
             speedCapt=speedCapt, nearSearch=nearSearch)
+        z2 = time.time()
+        vectTime[ind] += z2 - z1
         scoreNew = np.sum(solution) - 1
         assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
         assert(((scoreNew < score) and descent) or \
@@ -405,7 +338,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
             nearSearch = [True, pivots]
         dt = time.time() - t1
     
-    return solution, score
+    return solution, score, vectTime
 
 
 if __name__ == '__main__':    
@@ -414,16 +347,18 @@ if __name__ == '__main__':
     instanceName = '../Instances/captANOR400_10_80.dat'
 
     t1 = time.time()
-    solution, score = VNS(instanceName, Rcapt, Rcom)
+    solution, score, vectTime = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
     print('score : {}'.format(score))
-    print('\ndt : {}\n'.format(t2-t1))
+    print('dt : {}'.format(t2-t1))
+    print('vectTime : {}\n'.format(vectTime))
     
     vectScore = []
     t1 = time.time()
     for i in range(3):
         print(i)
-        solution, score = VNS(instanceName, Rcapt, Rcom)
+        solution, score, vectTime = VNS(instanceName, Rcapt, Rcom)
+        print('  > vectTime : {}'.format(vectTime))
         vectScore.append(score)
     t2 = time.time()
     print('score mean : {}'.format(np.mean(vectScore)))
