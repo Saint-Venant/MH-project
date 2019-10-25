@@ -16,12 +16,15 @@ Heuristics:
     * nearSearch : when searching for an improving solution, tend to favor
                    neighbors of the previous pivot(s)
 '''
+if __name__ == '__main__':
+    import sys
+    sys.path.append('..\\')
+
 import numpy as np
 import time
 
-import parserInstance
-
-import constraints
+from meta_VNS import parserInstance
+from meta_VNS import constraints
 
 
 def heurNearSearch(candidatesInsert, pivots, NeighCapt, NeighCom, param):
@@ -405,10 +408,10 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     return solution, score
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     Rcapt = 1
     Rcom = 2
-    instanceName = 'Instances/captANOR400_10_80.dat'
+    instanceName = '../Instances/captANOR400_10_80.dat'
 
     t1 = time.time()
     solution, score = VNS(instanceName, Rcapt, Rcom)
