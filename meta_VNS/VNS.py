@@ -13,8 +13,7 @@ Heuristics:
     * speedCapt : only consider candidates for deletion that have at least
                   one nother vertex selected in their Capt neighborhood
                   (heuristic only relevant for Rcapt < Rcom)
-    * nearSearch : when searching for an improving solution, tend to favor
-                   neighbors of the previous pivot(s)
+    * nearSearch : 
 '''
 if __name__ == '__main__':
     import sys
@@ -25,39 +24,9 @@ import time
 
 from meta_VNS import parserInstance
 from meta_VNS import constraints
+from meta_VNS import heuristics
 
 
-def heurNearSearch(candidatesInsert, pivots, NeighCapt, NeighCom, param):
-    '''
-    candidatesInsert : list of (empty) vertices, for which insertion will be
-                       considered
-    pivots : list of pivots (vertices inserted in the previous local search)
-    param : 1 -> correspond to candidatesInsert for greedyPivot1
-            2 -> correspond to candidatesInsert for greedyPivot2
-
-    Return a list of elements in candidatesInsert, reordered in a way that
-    vertices in the Com neighborhood of the pivots will be tested first
-    '''
-    assert(param in [1, 2])
-    nNodes = len(NeighCapt)
-    first = []
-    second = []
-
-    if (param == 1) or (param == 2):
-        markedCandidates = np.ones(nNodes, dtype=np.int)
-        markedCandidates[candidatesInsert] = 0
-        for i in pivots:
-            v = NeighCom[i][1]
-            for j in v:
-                if markedCandidates[j] == 0:
-                    markedCandidates[j] = 1
-                    first.append(j)
-        second = list(np.where(markedCandidates == 0)[0])
-
-    np.random.shuffle(first)
-    np.random.shuffle(second)
-    orderedCandidates = np.array(first+second)
-    return orderedCandidates
 
 def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
                  givenCandidates=None, \
@@ -114,7 +83,13 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
     if nearSearch[0]:
         pivots = nearSearch[1]
         assert(len(pivots) > 0)
-        indexEmpty = heurNearSearch(indexEmpty, pivots, NeighCapt, NeighCom, 1)
+        indexEmpty = heuristics.heurNearSearch(
+            indexEmpty,
+            pivots,
+            NeighCapt,
+            NeighCom,
+            1
+        )
     else:
         np.random.shuffle(indexEmpty)
     
@@ -125,14 +100,13 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
         solBis[i] = 1
 
         # candidates to be deleted
-        v = NeighCom[i][1]
+        v = np.array(NeighCom[i][1])
         if speedCapt:
-            indexSelected = np.where(solBis == 1)[0][1:]
-            candidates = [j for j in v if (solBis[j] == 1) and (j > 0) and \
-                         (np.sum(Acapt[np.ix_(indexSelected, [j])]) > 1)]
+            candidates = heuristics.heurSpeedCapt(solBis, v, Acapt)
         else:
-            candidates = [j for j in v if (solBis[j] == 1) and (j > 0)]
-        nCandidates = len(candidates)
+            cand1 = v[solBis[v] == 1]
+            candidates = cand1[cand1 > 0]
+        nCandidates = candidates.shape[0]
 
         # find a pair of vertices to delete
         np.random.shuffle(candidates)
@@ -142,6 +116,8 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
         while not(feasible) and (ind2 < nCandidates):
             j1 = candidates[ind1]
             j2 = candidates[ind2]
+            assert(solBis[j1] == 1)
+            assert(solBis[j2] == 1)
             solBis[j1] = 0
             solBis[j2] = 0
             feasible = constraints.checkConstraints(
@@ -188,7 +164,13 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
     if nearSearch[0]:
         pivots = nearSearch[1]
         assert(len(pivots) > 0)
-        indexEmpty = heurNearSearch(indexEmpty, pivots, NeighCapt, NeighCom, 2)
+        indexEmpty = heuristics.heurNearSearch(
+            indexEmpty,
+            pivots,
+            NeighCapt,
+            NeighCom,
+            2
+        )
     else:
         np.random.shuffle(indexEmpty)
 
@@ -219,22 +201,18 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
                 markedCandidates[0] = 1
                 markedCandidates[i1] = 1
                 markedCandidates[i2] = 1
-                candidates = [i1, i2]
+                neighborVertices = []
+                for j in v_i1+v_i2:
+                    if markedCandidates[j] == 0:
+                        markedCandidates[j] = 1
+                        neighborVertices.append(j)
+                neighborVertices = np.array(neighborVertices)
                 if speedCapt:
-                    indexSelected = np.where(solBis == 1)[0][1:]
-                    for j in v_i1+v_i2:
-                        if markedCandidates[j] == 0:
-                            markedCandidates[j] = 1
-                            if (solBis[j] == 1) and \
-                               (np.sum(Acapt[np.ix_(indexSelected, [j])]) > 1):
-                                candidates.append(j)
+                    candidates = heuristics.heurSpeedCapt(
+                        solBis, neighborVertices, Acapt)
                 else:
-                    for j in v_i1+v_i2:
-                        if markedCandidates[j] == 0:
-                            markedCandidates[j] = 1
-                            if solBis[j] == 1:
-                                candidates.append(j)
-                nCandidates = len(candidates)
+                    candidates = neighborVertices[solBis[neighborVertices] == 1]
+                nCandidates = candidates.shape[0]
 
                 # find 3 vertices to delete
                 np.random.shuffle(candidates)
@@ -299,6 +277,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     nNodes = Acapt.shape[0]
 
     # parameters
+    sizePop = 6
 
     # heuristics
     speedCapt = (Rcapt < Rcom)
