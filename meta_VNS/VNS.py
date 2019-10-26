@@ -80,9 +80,8 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
     assert(nEmpty > 0)
 
     # order of exploration
-    if nearSearch[0]:
+    if (nearSearch[0]) and (len(nearSearch[1]) > 0):
         pivots = nearSearch[1]
-        assert(len(pivots) > 0)
         indexEmpty = heuristics.heurNearSearch(
             indexEmpty,
             pivots,
@@ -161,9 +160,8 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
     nNodes = solution.shape[0]
 
     # order of exploration
-    if nearSearch[0]:
+    if (nearSearch[0]) and (len(nearSearch[1]) > 0):
         pivots = nearSearch[1]
-        assert(len(pivots) > 0)
         indexEmpty = heuristics.heurNearSearch(
             indexEmpty,
             pivots,
@@ -263,6 +261,124 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
         pivots = []
 
     return solBis, improved, pivots
+
+def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
+      t_max, neighFunctions, indStart):
+    '''
+    Compute local search using the given list of neighborhoods
+    neighFunctions
+
+    t_max : maximum time at which the function should stop
+    indStart : index in the neighFunctions list at which to start
+    '''
+    score = np.sum(solution) - 1
+    descent = True
+    nNeighFunctions = len(neighFunctions)
+    ind = indStart
+    while (ind < nNeighFunctions) and (time.time() < t_max):
+        neighFunc = neighFunctions[ind]
+        solution, descent, pivots = neighFunc(
+            solution,
+            Acapt,
+            Acom,
+            NeighCapt,
+            NeighCom,
+            speedCapt=speedCapt,
+            nearSearch=nearSearch
+        )
+        assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
+        scoreBis = np.sum(solution) - 1
+        assert(
+            ((scoreBis < score) and descent) or \
+            ((scoreBis == score) and not(descent))
+        )
+        score = scoreBis
+        if descent:
+            ind = 0
+        else:
+            ind += 1
+        if nearSearch[0] and (len(pivots) > 0):
+            nearSearch[1] = pivots
+            
+    return solution, score
+
+def V0(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
+       t_max):
+    '''
+    Compute local search using neighborhoods:
+    - greedyDelete
+
+    t_max : maximum time at which the function should stop
+    '''
+    neighFunctions = [greedyDelete]
+    indStart = 0
+    nearSearch0 = [False, []]
+    solution, score = V(
+        solution,
+        Acapt,
+        Acom,
+        NeighCapt,
+        NeighCom,
+        speedCapt,
+        nearSearch0,
+        t_max,
+        neighFunctions,
+        indStart
+    )
+    return solution, score
+
+def V1(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
+       t_max):
+    '''
+    Compute local search using neighborhoods:
+    - greedyDelete
+    - greedyPivot1
+
+    t_max : maximum time at which the function should stop
+    '''
+    neighFunctions = [greedyDelete, greedyPivot1]
+    indStart = 1
+    nearSearch1 = [nearSearch[0], []]
+    solution, score = V(
+        solution,
+        Acapt,
+        Acom,
+        NeighCapt,
+        NeighCom,
+        speedCapt,
+        nearSearch1,
+        t_max,
+        neighFunctions,
+        indStart
+    )
+    return solution, score
+
+def V2(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
+       t_max):
+    '''
+    Compute local search using neighborhoods:
+    - greedyDelete
+    - greedyPivot1
+    - greedyPivot2
+
+    t_max : maximum time at which the function should stop
+    '''
+    neighFunctions = [greedyDelete, greedyPivot1, greedyPivot2]
+    indStart = 2
+    nearSearch2 = [nearSearch[0], []]
+    solution, score = V(
+        solution,
+        Acapt,
+        Acom,
+        NeighCapt,
+        NeighCom,
+        speedCapt,
+        nearSearch2,
+        t_max,
+        neighFunctions,
+        indStart
+    )
+    return solution, score
             
 
 def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
@@ -281,6 +397,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 
     # heuristics
     speedCapt = (Rcapt < Rcom)
+    nearSearch = [True, []]
 
     # initialization
     solution = np.ones(nNodes, dtype=np.int)
@@ -288,36 +405,25 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     score = np.sum(solution) - 1
 
     # iterations over neighborhoods
-    neighborhoods = [greedyDelete, greedyPivot1, greedyPivot2]
-    descent = True
-    ind = 0
-    nearSearch = [False, []]
-    dt = time.time() - t1
-    vectTime = np.zeros(3)
-    while (ind < len(neighborhoods)) and (dt < dtMax):
-        V = neighborhoods[ind]
-        z1 = time.time()
-        solution, descent, pivots = V(
-            solution, Acapt, Acom, NeighCapt, NeighCom, \
-            speedCapt=speedCapt, nearSearch=nearSearch)
-        z2 = time.time()
-        vectTime[ind] += z2 - z1
-        scoreNew = np.sum(solution) - 1
-        assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
-        assert(((scoreNew < score) and descent) or \
-               ((scoreNew == score) and not(descent)))
-        score = scoreNew
-        if descent:
-            ind = 0
-        else:
-            ind += 1
-        if len(pivots) == 0:
-            nearSearch = [False, []]
-        else:
-            nearSearch = [True, pivots]
-        dt = time.time() - t1
+    vect_t_max = [t1+dtMax/10, t1+3*dtMax/10, t1+dtMax]
+    vect_V = [V0, V1, V2]
+    assert(len(vect_t_max) == len(vect_V))
+    for i in range(len(vect_t_max)):
+        V_i = vect_V[i]
+        t_max_i = vect_t_max[i]
+        solution, score = V_i(
+            solution,
+            Acapt,
+            Acom,
+            NeighCapt,
+            NeighCom,
+            speedCapt,
+            nearSearch,
+            t_max_i
+        )
+        print('{} > score : {}'.format(i, score))
     
-    return solution, score, vectTime
+    return solution, score
 
 
 if __name__ == '__main__':    
@@ -326,19 +432,20 @@ if __name__ == '__main__':
     instanceName = '../Instances/captANOR400_10_80.dat'
 
     t1 = time.time()
-    solution, score, vectTime = VNS(instanceName, Rcapt, Rcom)
+    solution, score = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
     print('score : {}'.format(score))
-    print('dt : {}'.format(t2-t1))
-    print('vectTime : {}\n'.format(vectTime))
+    print('dt : {}\n'.format(t2-t1))
+    #print('vectTime : {}\n'.format(vectTime))
     
     vectScore = []
     t1 = time.time()
     for i in range(3):
         print(i)
-        solution, score, vectTime = VNS(instanceName, Rcapt, Rcom)
-        print('  > vectTime : {}'.format(vectTime))
+        solution, score = VNS(instanceName, Rcapt, Rcom)
+        #print('  > vectTime : {}'.format(vectTime))
         vectScore.append(score)
+        print()
     t2 = time.time()
     print('score mean : {}'.format(np.mean(vectScore)))
     print('score min : {}\n'.format(np.min(vectScore)))
