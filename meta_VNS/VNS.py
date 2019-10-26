@@ -302,7 +302,7 @@ def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
             
     return solution, score
 
-def V0(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
+def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
        t_max):
     '''
     Compute local search using neighborhoods:
@@ -312,23 +312,36 @@ def V0(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
     '''
     neighFunctions = [greedyDelete]
     indStart = 0
-    nearSearch0 = [False, []]
-    solution, score = V(
-        solution,
-        Acapt,
-        Acom,
-        NeighCapt,
-        NeighCom,
-        speedCapt,
-        nearSearch0,
-        t_max,
-        neighFunctions,
-        indStart
-    )
-    return solution, score
+    
+    arraySolutions = []
+    arrayScores = []
+    while time.time() < t_max:
+        nearSearch0 = [False, []]
+        solution, score = V(
+            solutionInitial,
+            Acapt,
+            Acom,
+            NeighCapt,
+            NeighCom,
+            speedCapt,
+            nearSearch0,
+            time.time() + 60*10,
+            neighFunctions,
+            indStart
+        )
+        arraySolutions.append(solution)
+        arrayScores.append(score)
+        print('  score : {}'.format(score))
 
-def V1(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
-       t_max):
+    # sort solutions by increasing score
+    arraySolutions = np.array(arraySolutions)
+    arrayScores = np.array(arrayScores)
+    indexSort = np.argsort(arrayScores)
+        
+    return arraySolutions[indexSort], arrayScores[indexSort]
+
+def V1(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
+       speedCapt, nearSearch, t_max):
     '''
     Compute local search using neighborhoods:
     - greedyDelete
@@ -338,23 +351,40 @@ def V1(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
     '''
     neighFunctions = [greedyDelete, greedyPivot1]
     indStart = 1
-    nearSearch1 = [nearSearch[0], []]
-    solution, score = V(
-        solution,
-        Acapt,
-        Acom,
-        NeighCapt,
-        NeighCom,
-        speedCapt,
-        nearSearch1,
-        t_max,
-        neighFunctions,
-        indStart
-    )
-    return solution, score
 
-def V2(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
-       t_max):
+    nbSolutions = arraySolutions.shape[0]
+    i_solution = 0
+    while (i_solution < nbSolutions) and (time.time() < t_max):
+        nearSearch1 = [nearSearch[0], []]
+        solution, score = V(
+            arraySolutions[i_solution],
+            Acapt,
+            Acom,
+            NeighCapt,
+            NeighCom,
+            speedCapt,
+            nearSearch1,
+            t_max,
+            neighFunctions,
+            indStart
+        )
+        print('  > {} ; score : {} (previous score = {})'.format(
+            i_solution,
+            score,
+            arrayScores[i_solution]))
+        arraySolutions[i_solution] = solution
+        arrayScores[i_solution] = score
+        i_solution += 1
+
+    # sort solutions by increasing score
+    arraySolutions = np.array(arraySolutions)
+    arrayScores = np.array(arrayScores)
+    indexSort = np.argsort(arrayScores)
+        
+    return arraySolutions[indexSort], arrayScores[indexSort]
+
+def V2(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
+       speedCapt, nearSearch, t_max):
     '''
     Compute local search using neighborhoods:
     - greedyDelete
@@ -365,23 +395,40 @@ def V2(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
     '''
     neighFunctions = [greedyDelete, greedyPivot1, greedyPivot2]
     indStart = 2
-    nearSearch2 = [nearSearch[0], []]
-    solution, score = V(
-        solution,
-        Acapt,
-        Acom,
-        NeighCapt,
-        NeighCom,
-        speedCapt,
-        nearSearch2,
-        t_max,
-        neighFunctions,
-        indStart
-    )
-    return solution, score
+
+    nbSolutions = arraySolutions.shape[0]
+    i_solution = 0
+    while (i_solution < nbSolutions) and (time.time() < t_max):
+        nearSearch2 = [nearSearch[0], []]
+        solution, score = V(
+            arraySolutions[i_solution],
+            Acapt,
+            Acom,
+            NeighCapt,
+            NeighCom,
+            speedCapt,
+            nearSearch2,
+            t_max,
+            neighFunctions,
+            indStart
+        )
+        print('  > {} ; score : {} (previous score = {})'.format(
+            i_solution,
+            score,
+            arrayScores[i_solution]))
+        arraySolutions[i_solution] = solution
+        arrayScores[i_solution] = score
+        i_solution += 1
+
+    # sort solutions by increasing score
+    arraySolutions = np.array(arraySolutions)
+    arrayScores = np.array(arrayScores)
+    indexSort = np.argsort(arrayScores)
+        
+    return arraySolutions[indexSort], arrayScores[indexSort]
             
 
-def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
+def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     '''
     Implement VNS metaheuristic
     '''
@@ -393,37 +440,34 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     nNodes = Acapt.shape[0]
 
     # parameters
-    sizePop = 6
+    t_max0 = t1 + dtMax/20
+    t_max1 = t1 + 4*dtMax/20
+    t_max2 = t1 + dtMax
 
     # heuristics
     speedCapt = (Rcapt < Rcom)
     nearSearch = [True, []]
 
     # initialization
-    solution = np.ones(nNodes, dtype=np.int)
-    assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
-    score = np.sum(solution) - 1
+    solutionInitial = np.ones(nNodes, dtype=np.int)
+    assert(constraints.checkConstraints(solutionInitial, Acapt, Acom, NeighCom))
+    score = np.sum(solutionInitial) - 1
 
     # iterations over neighborhoods
-    vect_t_max = [t1+dtMax/10, t1+3*dtMax/10, t1+dtMax]
-    vect_V = [V0, V1, V2]
-    assert(len(vect_t_max) == len(vect_V))
-    for i in range(len(vect_t_max)):
-        V_i = vect_V[i]
-        t_max_i = vect_t_max[i]
-        solution, score = V_i(
-            solution,
-            Acapt,
-            Acom,
-            NeighCapt,
-            NeighCom,
-            speedCapt,
-            nearSearch,
-            t_max_i
-        )
-        print('{} > score : {}'.format(i, score))
+    arraySolutions, arrayScores = V0(
+        solutionInitial, Acapt, Acom, NeighCapt, NeighCom,
+        speedCapt, nearSearch, t_max0)
+    print()
+    arraySolutions, arrayScores = V1(
+        arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom,
+        speedCapt, nearSearch, t_max1)
+    print()
+    arraySolutions, arrayScores = V2(
+        arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom,
+        speedCapt, nearSearch, t_max2)
+    print()
     
-    return solution, score
+    return arraySolutions[0], arrayScores[0]
 
 
 if __name__ == '__main__':    
@@ -437,7 +481,8 @@ if __name__ == '__main__':
     print('score : {}'.format(score))
     print('dt : {}\n'.format(t2-t1))
     #print('vectTime : {}\n'.format(vectTime))
-    
+
+    '''
     vectScore = []
     t1 = time.time()
     for i in range(3):
@@ -450,4 +495,4 @@ if __name__ == '__main__':
     print('score mean : {}'.format(np.mean(vectScore)))
     print('score min : {}\n'.format(np.min(vectScore)))
     print(t2 - t1)
-    
+    '''
