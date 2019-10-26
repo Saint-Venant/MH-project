@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
 import numpy as np
 import time
+import multiprocessing as mp
 
 from meta_VNS import parserInstance
 from meta_VNS import constraints
@@ -303,7 +304,7 @@ def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
     return solution, score
 
 def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
-       t_max):
+       t_max, outputQueue):
     '''
     Compute local search using neighborhoods:
     - greedyDelete
@@ -313,8 +314,6 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
     neighFunctions = [greedyDelete]
     indStart = 0
     
-    arraySolutions = []
-    arrayScores = []
     while time.time() < t_max:
         nearSearch0 = [False, []]
         solution, score = V(
@@ -329,16 +328,19 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
             neighFunctions,
             indStart
         )
-        arraySolutions.append(solution)
-        arrayScores.append(score)
-        print('  score : {}'.format(score))
+        outputQueue.put((solution, score))
+        #arraySolutions.append(solution)
+        #arrayScores.append(score)
+        #print('  score : {}'.format(score))
+    outputQueue.put('Done')
+    print('exit !')
 
     # sort solutions by increasing score
-    arraySolutions = np.array(arraySolutions)
-    arrayScores = np.array(arrayScores)
-    indexSort = np.argsort(arrayScores)
+    #arraySolutions = np.array(arraySolutions)
+    #arrayScores = np.array(arrayScores)
+    #indexSort = np.argsort(arrayScores)
         
-    return arraySolutions[indexSort], arrayScores[indexSort]
+    #return arraySolutions[indexSort], arrayScores[indexSort]
 
 def V1(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max):
@@ -426,9 +428,46 @@ def V2(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
     indexSort = np.argsort(arrayScores)
         
     return arraySolutions[indexSort], arrayScores[indexSort]
-            
 
-def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
+def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
+                  speedCapt, nearSearch, t_max0, nbProcesses):
+    '''
+    Function to run in parallel several jobs
+    and collect the results
+    '''
+    outputQueue = mp.Queue()
+    jobs = []
+    for i in range(nbProcesses):
+        p = mp.Process(
+            target=V0,
+            args=(
+                solutionInitial,
+                Acapt,
+                Acom,
+                NeighCapt,
+                NeighCom,
+                speedCapt,
+                nearSearch,
+                t_max0,
+                outputQueue
+            )
+        )
+        jobs.append(p)
+        p.start()
+    results = []
+    countDone = 0
+    while countDone < len(jobs):
+        time.sleep(0.01)
+        x = outputQueue.get()
+        if x == 'Done':
+            countDone += 1
+        else:
+            results.append(x)
+    for p in jobs:
+        p.join()
+    return results
+
+def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
     '''
     Implement VNS metaheuristic
     '''
@@ -444,6 +483,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     t_max1 = t1 + 4*dtMax/20
     t_max2 = t1 + dtMax
 
+    # multiprocessing (parallel programming)
+    nbProcesses = 2
+
     # heuristics
     speedCapt = (Rcapt < Rcom)
     nearSearch = [True, []]
@@ -454,6 +496,60 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     score = np.sum(solutionInitial) - 1
 
     # iterations over neighborhoods
+    z1 = time.time()
+    V0args = ()
+    results = runParallelV0(
+        solutionInitial,
+        Acapt,
+        Acom,
+        NeighCapt,
+        NeighCom,
+        speedCapt,
+        nearSearch,
+        t_max0,
+        nbProcesses)
+    print(len(results))
+    assert(False)
+    
+    outputQueue = mp.Queue()
+    jobs = []
+    for i in range(nbProcesses):
+        p = mp.Process(
+                target=V0,
+                args=(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
+                      speedCapt, nearSearch, t_max0, outputQueue))
+                #args=(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
+                #      speedCapt, nearSearch, t_max0, outputQueue))
+        jobs.append(p)
+        p.start()
+    results = []
+    countDone = 0
+    while countDone < len(jobs):
+        time.sleep(0.1)
+        x = outputQueue.get()
+        print(x)
+        if x == 'Done':
+            countDone += 1
+        else:
+            results.append(x)
+    for p in jobs:
+        print('Waiting')
+        p.join()
+        print('Joined')
+        #results.append(outputQueue.get())
+    print('Terminated')
+    assert(False)
+    #results = [outputQueue.get() for p in jobs]
+    listSolutions = []
+    listScores = []
+    for x in results:
+        solution, score = x
+        listSolutions.append(solution)
+        listScores.append(score)
+    z2 = time.time()
+    print('dt = {}'.format(z2 - z1))
+    print(len(listSolutions))
+    assert(False)
     arraySolutions, arrayScores = V0(
         solutionInitial, Acapt, Acom, NeighCapt, NeighCom,
         speedCapt, nearSearch, t_max0)
