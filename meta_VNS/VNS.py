@@ -66,6 +66,39 @@ def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
         
     return solBis, feasible, pivots
 
+def getCandidatesDeletion(solution, listInserted, NeighCom):
+    '''
+    listInserted : list of inserted vertices
+
+    Return a list of candidates to be deleted
+    '''
+    n = solution.shape[0]
+    markedCandidates = np.zeros(n, dtype=np.int)
+    # -- do not delete vertex 0
+    markedCandidates[0] = 1
+    # -- do not delete vertices just inserted
+    markedCandidates[listInserted] = 1
+    # -- can only consider vertices that are selected
+    markedCandidates[solution == 0] = 1
+
+    # get neighbors of degree 1 and 2 in the Com graphe
+    neighborVertices = []
+    for i in listInserted:
+        v_i = NeighCom[i][1]
+        for j in v_i:
+            v_j = NeighCom[j][1]
+            for k in v_j:
+                if markedCandidates[k] == 0:
+                    markedCandidates[k] = 1
+                    neighborVertices.append(k)
+    neighborVertices = np.array(neighborVertices)
+    
+    # -- can only consider vertices that are capted by more than themselves
+    indexSelected = np.where(solution == 1)[0][1:]
+    Scapt = np.sum(Acapt[np.ix_(indexSelected, neighborVertices)], axis=0)
+    candidates = neighborVertices[Scapt > 1]
+    return candidates
+    
 def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
                  speedCapt=False, nearSearch=[False, []]):
     '''
@@ -311,6 +344,7 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
     '''
     neighFunctions = [greedyDelete]
     indStart = 0
+    count = 0
     
     while time.time() < t_max:
         nearSearch0 = [False, []]
@@ -327,7 +361,9 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
             indStart
         )
         outputQueue.put((solution, score))
+        count += 1
     outputQueue.put('Done')
+    print('V0 generated {} solutions'.format(count))
 
 def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max, outputQueue):
@@ -355,12 +391,9 @@ def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
             neighFunctions,
             indStart
         )
-        print('  > {} ; score : {} (previous score = {})'.format(
-            i_solution,
-            score,
-            listScores[i_solution]))
         outputQueue.put((solution, score))
         i_solution += 1
+    nbExplored = i_solution
 
     # add also solutions for which the programm didn't have time to perform
     #   a local search
@@ -368,6 +401,7 @@ def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
         outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
         i_solution += 1
     outputQueue.put('Done')
+    print('V1 explored {}/{} solutions'.format(nbExplored, nbSolutions))
 
 def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max, outputQueue):
@@ -395,12 +429,9 @@ def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
             neighFunctions,
             indStart
         )
-        print('  > {} ; score : {} (previous score = {})'.format(
-            i_solution,
-            score,
-            listScores[i_solution]))
         outputQueue.put((solution, score))
         i_solution += 1
+    nbExplored = i_solution
 
     # add also solutions for which the programm didn't have time to perform
     #   a local search
@@ -408,6 +439,7 @@ def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
         outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
         i_solution += 1
     outputQueue.put('Done')
+    print('V2 explored {}/{} solutions'.format(nbExplored, nbSolutions))
 
 def collectResults(jobs, outputQueue):
     '''
@@ -576,7 +608,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     z2 = time.time()
     print(' --- V0 ---')
     print('  > dt = {}'.format(z2 - z1))
-    print('  > dt_max = {}\'.format(dt1))
+    print('  > dt_max = {}\n'.format(dt0))
 
     # -- V1
     listSolutions = [res[0] for res in results]
@@ -592,7 +624,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     z2 = time.time()
     print(' --- V1 ---')
     print('  > dt = {}'.format(z2 - z1))
-    print('  > dt_max = {}\n'.format(dt2))
+    print('  > dt_max = {}\n'.format(dt1))
 
     # -- V2
     listSolutions = [res[0] for res in results]
@@ -628,19 +660,3 @@ if __name__ == '__main__':
     t2 = time.time()
     print('score : {}'.format(score))
     print('dt : {}\n'.format(t2-t1))
-    #print('vectTime : {}\n'.format(vectTime))
-
-    '''
-    vectScore = []
-    t1 = time.time()
-    for i in range(3):
-        print(i)
-        solution, score = VNS(instanceName, Rcapt, Rcom)
-        #print('  > vectTime : {}'.format(vectTime))
-        vectScore.append(score)
-        print()
-    t2 = time.time()
-    print('score mean : {}'.format(np.mean(vectScore)))
-    print('score min : {}\n'.format(np.min(vectScore)))
-    print(t2 - t1)
-    '''
