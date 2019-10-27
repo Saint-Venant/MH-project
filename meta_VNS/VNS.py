@@ -370,6 +370,7 @@ def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     while i_solution < nbSolutions:
         outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
         i_solution += 1
+    outputQueue.put('Done')
 
 def V2(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max):
@@ -448,12 +449,12 @@ def splitWork(listSolutions, listScores, nbProcesses):
     arrayScores = arrayScores[indexSort]
     
     # split the work
-    listWork = [nbProcesses*[[], []]]
+    listWork = [[[], []] for i in range(nbProcesses)]
     i_work = 0
     for i_solution in range(arraySolutions.shape[0]):
         listWork[i_work][0].append(arraySolutions[i_solution])
         listWork[i_work][1].append(arrayScores[i_solution])
-        i_work += 1
+        i_work = (i_work + 1)%nbProcesses
 
     return listWork
 
@@ -492,13 +493,16 @@ def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     and collect the results
     '''
     # split the solutions between the processes
+    listWork = splitWork(listSolutions, listScores, nbProcesses)
+    
     outputQueue = mp.Queue()
     jobs = []
     for i in range(nbProcesses):
         p = mp.Process(
             target=V1,
             args=(
-                solutionInitial,
+                listWork[i][0],
+                listWork[i][1],
                 Acapt,
                 Acom,
                 NeighCapt,
@@ -514,7 +518,7 @@ def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     results = collectResults(jobs, outputQueue)
     return results
 
-def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
+def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     '''
     Implement VNS metaheuristic
     '''
@@ -553,6 +557,21 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
         speedCapt,
         nearSearch,
         t_max0,
+        nbProcesses)
+    z2 = time.time()
+    print(len(results))
+    print('dt = {}'.format(z2 - z1))
+
+    listSolutions = [res[0] for res in results]
+    listScores = [res[1] for res in results]
+    z1 = time.time()
+    results = runParallelV1(
+        listSolutions,
+        listScores,
+        Acapt, Acom,
+        NeighCapt, NeighCom,
+        speedCapt, nearSearch,
+        t_max1,
         nbProcesses)
     z2 = time.time()
     print(len(results))
