@@ -9,11 +9,9 @@ In this file:
     - NeighCapt : list of neighbors of each vertex in capt graph
     - NeighCom : list of neighbors of each vertex in com graph
 
-Heuristics:
-    * speedCapt : only consider candidates for deletion that have at least
-                  one nother vertex selected in their Capt neighborhood
-                  (heuristic only relevant for Rcapt < Rcom)
-    * nearSearch : 
+Heuristics: (described in the file heuristics.py)
+    * speedCapt
+    * nearSearch 
 '''
 if __name__ == '__main__':
     import sys
@@ -429,6 +427,26 @@ def V2(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
         
     return arraySolutions[indexSort], arrayScores[indexSort]
 
+def collectResults(jobs, outputQueue):
+    '''
+    jobs : list of multiprocessing.Process that run in parallel
+
+    Return the list of results, collected in the ouput multiprocessing.Queue
+    + join the processes before returning any result
+    '''
+    results = []
+    countDone = 0
+    while countDone < len(jobs):
+        time.sleep(0.01)
+        x = outputQueue.get()
+        if x == 'Done':
+            countDone += 1
+        else:
+            results.append(x)
+    for p in jobs:
+        p.join()
+    return results
+
 def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
                   speedCapt, nearSearch, t_max0, nbProcesses):
     '''
@@ -454,17 +472,7 @@ def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
         )
         jobs.append(p)
         p.start()
-    results = []
-    countDone = 0
-    while countDone < len(jobs):
-        time.sleep(0.01)
-        x = outputQueue.get()
-        if x == 'Done':
-            countDone += 1
-        else:
-            results.append(x)
-    for p in jobs:
-        p.join()
+    results = collectResults(jobs, outputQueue)
     return results
 
 def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
@@ -497,7 +505,6 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
 
     # iterations over neighborhoods
     z1 = time.time()
-    V0args = ()
     results = runParallelV0(
         solutionInitial,
         Acapt,
@@ -508,38 +515,12 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*10):
         nearSearch,
         t_max0,
         nbProcesses)
+    z2 = time.time()
     print(len(results))
+    print('dt = {}'.format(z2 - z1))
     assert(False)
     
-    outputQueue = mp.Queue()
-    jobs = []
-    for i in range(nbProcesses):
-        p = mp.Process(
-                target=V0,
-                args=(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
-                      speedCapt, nearSearch, t_max0, outputQueue))
-                #args=(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
-                #      speedCapt, nearSearch, t_max0, outputQueue))
-        jobs.append(p)
-        p.start()
-    results = []
-    countDone = 0
-    while countDone < len(jobs):
-        time.sleep(0.1)
-        x = outputQueue.get()
-        print(x)
-        if x == 'Done':
-            countDone += 1
-        else:
-            results.append(x)
-    for p in jobs:
-        print('Waiting')
-        p.join()
-        print('Joined')
-        #results.append(outputQueue.get())
-    print('Terminated')
-    assert(False)
-    #results = [outputQueue.get() for p in jobs]
+    
     listSolutions = []
     listScores = []
     for x in results:
