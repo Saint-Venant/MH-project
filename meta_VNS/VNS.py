@@ -544,9 +544,12 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     nNodes = Acapt.shape[0]
 
     # parameters
-    t_max0 = t1 + dtMax/20
-    t_max1 = t1 + 4*dtMax/20
-    t_max2 = t1 + dtMax
+    dt0 = dtMax/10
+    dt1 = 4*dtMax/10
+    dt2 = dtMax/2
+    t_max0 = t1 + dt0
+    t_max1 = t_max0 + dt1
+    t_max2 = t_max1 + dt2
 
     # multiprocessing (parallel programming)
     nbProcesses = 6
@@ -571,7 +574,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
         t_max0,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
+    print(' --- V0 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}\'.format(dt1))
 
     # -- V1
     listSolutions = [res[0] for res in results]
@@ -585,7 +590,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
         t_max1,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
+    print(' --- V1 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}\n'.format(dt2))
 
     # -- V2
     listSolutions = [res[0] for res in results]
@@ -599,7 +606,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
         t_max1,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
+    print(' --- V2 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}\n'.format(dt2))
 
     # get best solution
     listSolutions = [res[0] for res in results]
