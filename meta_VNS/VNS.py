@@ -327,21 +327,10 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
             indStart
         )
         outputQueue.put((solution, score))
-        #arraySolutions.append(solution)
-        #arrayScores.append(score)
-        #print('  score : {}'.format(score))
     outputQueue.put('Done')
-    print('exit !')
 
-    # sort solutions by increasing score
-    #arraySolutions = np.array(arraySolutions)
-    #arrayScores = np.array(arrayScores)
-    #indexSort = np.argsort(arrayScores)
-        
-    #return arraySolutions[indexSort], arrayScores[indexSort]
-
-def V1(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
-       speedCapt, nearSearch, t_max):
+def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+       speedCapt, nearSearch, t_max, outputQueue):
     '''
     Compute local search using neighborhoods:
     - greedyDelete
@@ -352,12 +341,13 @@ def V1(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
     neighFunctions = [greedyDelete, greedyPivot1]
     indStart = 1
 
-    nbSolutions = arraySolutions.shape[0]
+    nbSolutions = len(listSolutions)
+    assert(len(listSolutions) == len(listScores))
     i_solution = 0
     while (i_solution < nbSolutions) and (time.time() < t_max):
         nearSearch1 = [nearSearch[0], []]
         solution, score = V(
-            arraySolutions[i_solution],
+            listSolutions[i_solution],
             Acapt,
             Acom,
             NeighCapt,
@@ -371,17 +361,15 @@ def V1(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
         print('  > {} ; score : {} (previous score = {})'.format(
             i_solution,
             score,
-            arrayScores[i_solution]))
-        arraySolutions[i_solution] = solution
-        arrayScores[i_solution] = score
+            listScores[i_solution]))
+        outputQueue.put((solution, score))
         i_solution += 1
 
-    # sort solutions by increasing score
-    arraySolutions = np.array(arraySolutions)
-    arrayScores = np.array(arrayScores)
-    indexSort = np.argsort(arrayScores)
-        
-    return arraySolutions[indexSort], arrayScores[indexSort]
+    # add also solutions for which the programm didn't have time to perform
+    #   a local search
+    while i_solution < nbSolutions:
+        outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
+        i_solution += 1
 
 def V2(arraySolutions, arrayScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max):
@@ -447,6 +435,28 @@ def collectResults(jobs, outputQueue):
         p.join()
     return results
 
+def splitWork(listSolutions, listScores, nbProcesses):
+    '''
+    Return a list, of length nbProcesses), in which we have split the solutions
+    Manage to put solutions with lower score first
+    '''
+    # sort solutions by increasing score
+    arraySolutions = np.array(listSolutions)
+    arrayScores = np.array(listScores)
+    indexSort = np.argsort(arrayScores)
+    arraySolutions = arraySolutions[indexSort]
+    arrayScores = arrayScores[indexSort]
+    
+    # split the work
+    listWork = [nbProcesses*[[], []]]
+    i_work = 0
+    for i_solution in range(arraySolutions.shape[0]):
+        listWork[i_work][0].append(arraySolutions[i_solution])
+        listWork[i_work][1].append(arrayScores[i_solution])
+        i_work += 1
+
+    return listWork
+
 def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
                   speedCapt, nearSearch, t_max0, nbProcesses):
     '''
@@ -458,6 +468,35 @@ def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
     for i in range(nbProcesses):
         p = mp.Process(
             target=V0,
+            args=(
+                solutionInitial,
+                Acapt,
+                Acom,
+                NeighCapt,
+                NeighCom,
+                speedCapt,
+                nearSearch,
+                t_max0,
+                outputQueue
+            )
+        )
+        jobs.append(p)
+        p.start()
+    results = collectResults(jobs, outputQueue)
+    return results
+
+def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+                  speedCapt, nearSearch, t_max0, nbProcesses):
+    '''
+    Function to run in parallel several jobs
+    and collect the results
+    '''
+    # split the solutions between the processes
+    outputQueue = mp.Queue()
+    jobs = []
+    for i in range(nbProcesses):
+        p = mp.Process(
+            target=V1,
             args=(
                 solutionInitial,
                 Acapt,
