@@ -24,6 +24,7 @@ def display(instanceName, Rcapt, Rcom, solution, score):
     # plot selected vertices
     indexSelected = np.where(solution == 1)[0]
     plt.scatter(x[indexSelected], y[indexSelected], color='r')
+    plt.scatter(x[0], y[0], color='magenta')
 
     # plot Com connections
     N = indexSelected.shape[0]
@@ -32,7 +33,9 @@ def display(instanceName, Rcapt, Rcom, solution, score):
         v = NeighCom[i][1]
         for j in v:
             plt.plot([x[i], x[j]], [y[i], y[j]], c='g')
-        ax.add_patch(plt.Circle((x[i], y[i]), Rcapt, color='orange', alpha=0.1))
+        if i > 0:
+            ax.add_patch(plt.Circle((x[i], y[i]), Rcapt, color='orange', \
+                                    alpha=0.1))
 
     title = '{}\nRcapt = {} ; Rcom = {}\nScore = {}'
     plt.title(title.format(instanceName, Rcapt, Rcom, score))
