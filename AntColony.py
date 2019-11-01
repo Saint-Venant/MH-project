@@ -63,6 +63,8 @@ def CreerUnChemin(li,Accessible):
 #    Dans cette fonction on ne rajoute pas la clause "on ne peut pas repasser par un sommet par lequel on est déjà passé" car il peut être nécessaire de passer plusieurs fois au même endroit
     DernierSommet=li[-1]
     print("li",li)
+    if len(li)>1500 :
+        return "ABORT EVERYTHING"
 #    ON regarde dans un premier tmeps tous les sommets vers lesquels on peut aller
     if np.sum(Accessible)!=1:print("error proba")
     n=len(Accessible)
@@ -81,39 +83,38 @@ def CreerUnChemin(li,Accessible):
 #    ON en choisit un en proba en fonction de rho
 
 
-def Visibilite1(k,liste):
+def Visibilite1(k,Sommets):
 #    C'est cette fonction qu'on va modifier lorsqu'on voudra changer la probabilite de'allr d'un somet à un autre
     if not (type(k)==type(1)): print("probleme de type")
 #    Renvoie la liste relative au sommet k telle que : l[i]=0 ssi inateignable, l[i]=1/distance(i,k)
     global Acom
-    liste=Acom[k]
-    n=len(liste)
+    LaOuOnPeutAller=Acom[k]
+    n=len(LaOuOnPeutAller)
     for i in range(n):
-        if liste[i]!=0:
+        if LaOuOnPeutAller[i]!=0:
             if not i==k:
-                liste[i]=1/parserInstance.distance2(parserInstance.readInstance(instanceName)[k],parserInstance.readInstance(instanceName)[i])
+                LaOuOnPeutAller[i]=1/parserInstance.distance2(parserInstance.readInstance(instanceName)[k],parserInstance.readInstance(instanceName)[i])
             else:
-                liste[i]=0
-    return liste            
+                LaOuOnPeutAller[i]=0
+    return LaOuOnPeutAller            
 
-def Visibilite2(k,liste):
+def Visibilite2(k,Sommets,p=0):
 #    C'est cette fonction qu'on va modifier lorsqu'on voudra changer la probabilite de'allr d'un somet à un autre
     if not (type(k)==type(1)): print("probleme de type")
-#    Renvoie la liste relative au sommet k telle que : l[i]=0 ssi inateignable, l[i]=1/distance(i,k)
+#    Renvoie la liste relative au sommet k telle que : l[i]=0 ssi inateignable, l[i]=1 sinon et p ssi on est déjà passé là
     global Acom
-    liste=Acom[k]
-    n=len(liste)
-    p=0.3
+    LaOuOnPeutAller=Acom[k]
+    n=len(LaOuOnPeutAller)
     for i in range(n):
-        if liste[i]!=0:
+        if LaOuOnPeutAller[i]!=0:
             if not i==k:
-                if not i in liste:
-                    liste[i]=1
+                if not i in Sommets:
+                    LaOuOnPeutAller[i]=1
                 else:
-                    liste[i]=p
+                    LaOuOnPeutAller[i]=p
             else:
-                liste[i]=0
-    return liste            
+                LaOuOnPeutAller[i]=0
+    return LaOuOnPeutAller            
     
 def Rho(x,a=0.95,b=-0.05):
 #    Lafocntoin qui évapore les phéromones
@@ -138,6 +139,7 @@ def score(solution):
 
 Pheromone=len(parserInstance.readInstance(instanceName))*[1]
     
+sol=[]
 def ColonyAnt(instanceName,Rcapt,Rcom):
 	'''
 	impmlement the ant colony heuristic
@@ -155,7 +157,7 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 	global Pheromone
 	
 	#Iterations
-	Stop=NombreDInstance
+	Stop=15#NombreDInstance
 #    Stop permet d'arrêter un fourmi si elle n'a rien rapporté au bout de Stop tour
 	NombreDeTour=1000
 	# NombreDeTour est le nombre d'itération max qu'on s'est fixé
@@ -173,6 +175,7 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 		AntColony=[]
 #            AntColony vaudra une liste de longueur n et telle que AntColony[i]= le ieme chemin proposé par la ieme fourmi
 		Ant=NombreDInstance*[0]	
+		global sol
 		sol=[]
 #		On a besoin de sol car sol est une liste de sommet, il faut savoir quel sommet on a mis en dernier, et Ant est une liste de booléen, pour se formaliser sur cce qu'on s'était dit initialement
 		for i in range(NombreDInstance):
@@ -182,8 +185,8 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 #                Les fourmis partent d'un point source à n'importe quel sommet en temps
 			while not constraints.checkConstraints(SolutionToAnt(sol,NombreDInstance), Acapt, Acom, NeighCom):
 				for iter in range(Stop):
-					print("Visibilite2",Visibilite2(i,sol))
-					AccessibiliteDesCibles=MultList(Visibilite2(i,sol),Pheromone)
+					print("Visibilite2",Visibilite2(i,sol,p=0.3))
+					AccessibiliteDesCibles=MultList(Visibilite2(i,sol,p=0.3),Pheromone)
 					j=np.sum(AccessibiliteDesCibles)
 					AccessibiliteDesCibles=[g * (1/j) for g in AccessibiliteDesCibles]
 					print("AccessibiliteDesCibles",AccessibiliteDesCibles)
