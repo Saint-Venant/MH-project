@@ -24,6 +24,7 @@ import multiprocessing as mp
 from meta_VNS import parserInstance
 from meta_VNS import constraints
 from meta_VNS import heuristics
+import displaySolution
 
 
 
@@ -66,6 +67,76 @@ def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
         
     return solBis, feasible, pivots
 
+def deleteNb(solution, candidates, nbDeletions, Acapt, Acom, NeighCapt, \
+             NeighCom):
+    '''
+    Try to delete nbDeletions from the given solution
+    '''
+    if (nbDeletions == 0):
+        improved = True
+        return solution, improved
+    elif len(candidates) == 0:
+        improved = False
+        return solution, improved
+    else:
+        improved = False
+        nCandidates = candidates.shape[0]
+        ind = 0
+        while not(improved) and (ind < nCandidates):
+            # Try to delete i
+            i = candidates[ind]
+            assert(solution[i] == 1)
+            solution[i] = 0
+            
+            feasible = constraints.checkConstraints(
+                solution, Acapt, Acom, NeighCom)
+
+            if feasible:
+                otherCandidates = candidates[ind+1:]
+                solution, improved = deleteNb(
+                    solution, otherCandidates, nbDeletions-1, Acapt, Acom, \
+                    NeighCapt, NeighCom)
+                
+            if not(improved):
+                solution[i] = 1
+                ind += 1
+
+        return solution, improved
+
+def getCandidatesDeletion(solution, listInserted, Acapt, NeighCom):
+    '''
+    listInserted : list of inserted vertices
+
+    Return a list of candidates to be deleted
+    '''
+    n = solution.shape[0]
+    markedCandidates = np.zeros(n, dtype=np.int)
+    # -- do not delete vertex 0
+    markedCandidates[0] = 1
+    # -- do not delete vertices just inserted
+    markedCandidates[listInserted] = 1
+    # -- can only consider vertices that are selected
+    markedCandidates[solution == 0] = 1
+
+    # get neighbors of degree 1 and 2 in the Com graphe
+    neighborVertices = []
+    for i in listInserted:
+        v_i = NeighCom[i][1]
+        for j in v_i:
+            v_j = NeighCom[j][1]
+            for k in v_j:
+                if markedCandidates[k] == 0:
+                    markedCandidates[k] = 1
+                    neighborVertices.append(k)
+    neighborVertices = np.array(neighborVertices)
+    
+    # -- can only consider vertices that are capted by more than themselves
+    indexSelected = np.where(solution == 1)[0][1:]
+    Scapt = np.sum(Acapt[np.ix_(indexSelected, neighborVertices)], axis=0)
+    candidates = neighborVertices[Scapt > 1]
+    np.random.shuffle(candidates)
+    return candidates
+    
 def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
                  speedCapt=False, nearSearch=[False, []]):
     '''
@@ -75,6 +146,7 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
+    indexSelected = np.where(solution == 1)[0][1:]
     nEmpty = indexEmpty.shape[0]
     assert(nEmpty > 0)
 
@@ -90,7 +162,7 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
         )
     else:
         np.random.shuffle(indexEmpty)
-    
+
     ind = 0
     improved = False
     while not(improved) and (ind < nEmpty):
@@ -98,43 +170,24 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
         solBis[i] = 1
 
         # candidates to be deleted
-        v = np.array(NeighCom[i][1])
-        if speedCapt:
-            candidates = heuristics.heurSpeedCapt(solBis, v, Acapt)
-        else:
-            cand1 = v[solBis[v] == 1]
-            candidates = cand1[cand1 > 0]
+        candidates = getCandidatesDeletion(solBis, [i], Acapt, NeighCom)
         nCandidates = candidates.shape[0]
 
-        # find a pair of vertices to delete
-        np.random.shuffle(candidates)
-        ind1 = 0
-        ind2 = 1
-        feasible = False
-        while not(feasible) and (ind2 < nCandidates):
-            j1 = candidates[ind1]
-            j2 = candidates[ind2]
-            assert(solBis[j1] == 1)
-            assert(solBis[j2] == 1)
-            solBis[j1] = 0
-            solBis[j2] = 0
-            feasible = constraints.checkConstraints(
-                solBis, Acapt, Acom, NeighCom)
-            if not(feasible):
-                solBis[j1] = 1
-                solBis[j2] = 1
-                if ind2 < nCandidates - 1:
-                    ind2 += 1
-                else:
-                    ind1 += 1
-                    ind2 = ind1 + 1
+        # Try to delete 2 vertices
+        solTer = np.copy(solBis)
+        scoreTer = np.sum(solTer) - 1
+        solBis, improved = deleteNb(
+            solBis, candidates, 2, Acapt, Acom, NeighCapt, NeighCom)
+        score = np.sum(solBis) - 1
+        if improved:
+            assert(score < scoreTer - 1)
+        else:
+            assert(np.all(solBis == solTer))
 
         # Try another pivot if the solution cannot be improved
-        if not(feasible):
+        if not(improved):
             ind += 1
             solBis[i] = 0
-        else:
-            improved = True
 
     if improved:
         pivots = [i]
@@ -154,6 +207,7 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
     '''
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
+    indexSelected = np.where(solution == 1)[0][1:]
     nEmpty = indexEmpty.shape[0]
     assert(nEmpty > 0)
     nNodes = solution.shape[0]
@@ -194,50 +248,20 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
                 solBis[i2] = 1
 
                 # candidates to be deleted
-                markedCandidates = np.zeros(nNodes, dtype=np.int)
-                markedCandidates[0] = 1
-                markedCandidates[i1] = 1
-                markedCandidates[i2] = 1
-                neighborVertices = []
-                for j in v_i1+v_i2:
-                    if markedCandidates[j] == 0:
-                        markedCandidates[j] = 1
-                        neighborVertices.append(j)
-                neighborVertices = np.array(neighborVertices)
-                if speedCapt:
-                    candidates = heuristics.heurSpeedCapt(
-                        solBis, neighborVertices, Acapt)
-                else:
-                    candidates = neighborVertices[solBis[neighborVertices] == 1]
+                candidates = getCandidatesDeletion(
+                    solBis, [i1, i2], Acapt, NeighCom)
                 nCandidates = candidates.shape[0]
 
-                # find 3 vertices to delete
-                np.random.shuffle(candidates)
-                ind1 = 0
-                ind2 = 1
-                ind3 = 2
-                while not(improved) and (ind3 < nCandidates):
-                    j1 = candidates[ind1]
-                    j2 = candidates[ind2]
-                    j3 = candidates[ind3]
-                    solBis[j1] = 0
-                    solBis[j2] = 0
-                    solBis[j3] = 0
-                    improved = constraints.checkConstraints(
-                        solBis, Acapt, Acom, NeighCom)
-                    if not(improved):
-                        solBis[j1] = 1
-                        solBis[j2] = 1
-                        solBis[j3] = 1
-                        if ind3 < nCandidates - 1:
-                            ind3 += 1
-                        elif ind2 < nCandidates - 2:
-                            ind2 += 1
-                            ind3 = ind2 + 1
-                        else:
-                            ind1 += 1
-                            ind2 = ind1 + 1
-                            ind3 = ind2 + 1
+                # Try to find 3 vertices to delete
+                solTer = np.copy(solBis)
+                scoreTer = np.sum(solTer) - 1
+                solBis, improved = deleteNb(
+                    solBis, candidates, 3, Acapt, Acom, NeighCapt, NeighCom)
+                score = np.sum(solBis) - 1
+                if improved:
+                    assert(score < scoreTer - 2)
+                else:
+                    assert(np.all(solBis == solTer))
 
                 if not(improved):
                     solBis[i1] = 0
@@ -260,6 +284,150 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
         pivots = []
 
     return solBis, improved, pivots
+
+def localPathPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
+                    speedCapt=False, nearSearch=[False, []]):
+    '''
+    To explore a wider neighborhood, build a path (of max length 5) of
+    neighbor solutions resulting in swaps
+    '''
+    maxLength = 20
+    listInserted = []
+    solBis = np.copy(solution)
+
+    indexEmpty = np.where(solBis == 0)[0]
+    nEmpty = indexEmpty.shape[0]
+    np.random.shuffle(indexEmpty)
+
+    improved = False
+    indInsert = 0
+    while not(improved) and (len(listInserted) < maxLength) and \
+          (indInsert < nEmpty):
+        i = indexEmpty[indInsert]
+        solBis[i] = 1
+        listInserted.append(i)
+
+        # candidates to be deleted
+        candidates = getCandidatesDeletion(
+            solBis, listInserted, Acapt, NeighCom)
+        nCandidates = candidates.shape[0]
+
+        # find a candidate to delete
+        indDelete = 0
+        feasible = False
+        while not(feasible) and (indDelete < nCandidates):
+            j = candidates[indDelete]
+            assert((solBis[j] == 1) and (j > 0))
+            solBis[j] = 0
+            
+            feasible = constraints.checkConstraints(
+                solBis, Acapt, Acom, NeighCom)
+            if not(feasible):
+                solBis[j] = 1
+                indDelete += 1
+
+        if feasible:
+            # Try to perform a local descent on this new solution
+            # -- greedyDelete
+            solTer, improved, pivots = greedyDelete(
+                solBis, Acapt, Acom, NeighCapt, NeighCom, \
+                speedCapt=False, nearSearch=[False, []])
+            if not(improved):
+                # -- greedyPivot1
+                solTer, improved, pivots = greedyPivot1(
+                    solBis, Acapt, Acom, NeighCapt, NeighCom, \
+                    speedCapt=False, nearSearch=[False, []])
+
+            if improved:
+                solBis = solTer
+            else:
+                indInsert += 1
+        else:
+            solBis[i] = 0
+            listInserted.remove(i)
+            indInsert += 1
+    print('  * {}'.format(len(listInserted)))
+
+    return solBis, improved, []
+
+def combine2Solutions(solution1, solution2, Acapt, Acom, NeighCapt, NeighCom):
+    '''
+    Try to combine 2 solutions (idea of path relinking)
+    '''
+    solBis = np.copy(solution1)
+
+    # vertices not in solution1
+    indexEmpty = np.where(solBis == 0)[0]
+    nEmpty = indexEmpty.shape[0]
+
+    # candidates for deletion : vertices that are in solution1 but not in
+    # solution2
+    candidates = np.where(np.multiply(solBis == 1, solution2 == 0))[0]
+    nCandidates = candidates.shape[0]
+    np.random.shuffle(candidates)
+    print('  > {} candidates (combineSolutions)'.format(nCandidates))
+
+    np.random.shuffle(indexEmpty)
+    improved = False
+    ind = 0
+    while not(improved) and (ind < nEmpty):
+        i = indexEmpty[ind]
+        assert(solBis[i] == 0)
+        solBis[i] = 1
+
+        ind_j1 = 0
+        ind_j2 = 1
+        while not(improved) and (ind_j1 < nCandidates - 1):
+            # Try to delete j1
+            j1 = candidates[ind_j1]
+            assert(solBis[j1] == 1)
+            solBis[j1] = 0
+            feasible = constraints.checkConstraints(
+                solBis, Acapt, Acom, NeighCom)
+
+            while feasible and not(improved) and (ind_j2 < nCandidates):
+                # Try to delete j2
+                j2 = candidates[ind_j2]
+                assert(solBis[j2] == 1)
+                solBis[j2] = 0
+                
+                improved = constraints.checkConstraints(
+                    solBis, Acapt, Acom, NeighCom)
+
+                if not(improved):
+                    solBis[j2] = 1
+                    ind_j2 += 1
+
+            if not(improved):
+                solBis[j1] = 1
+                ind_j1 += 1
+                ind_j2 = ind_j1 + 1
+                
+
+        # Try another pivot if the solution cannot be improved
+        if not(improved):
+            ind += 1
+            solBis[i] = 0
+
+    return solBis, improved
+
+def combineSolutions(listSolutions, Acapt, Acom, NeighCapt, NeighCom, t_max):
+    '''
+    Try to combine the best solution with all the others
+    '''
+    solutionRef = listSolutions[0]
+    nSolutions = len(listSolutions)
+
+    improved = False
+    ind = 1
+    while not(improved) and (ind < nSolutions) and (time.time() < t_max):
+        solution2 = listSolutions[ind]
+        solBis, improved = combine2Solutions(
+            solutionRef, solution2, Acapt, Acom, NeighCapt, NeighCom)
+        if not(improved):
+            ind += 1
+
+    return solBis, improved    
 
 def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
       t_max, neighFunctions, indStart):
@@ -311,6 +479,7 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
     '''
     neighFunctions = [greedyDelete]
     indStart = 0
+    count = 0
     
     while time.time() < t_max:
         nearSearch0 = [False, []]
@@ -327,7 +496,9 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
             indStart
         )
         outputQueue.put((solution, score))
+        count += 1
     outputQueue.put('Done')
+    print('V0 generated {} solutions'.format(count))
 
 def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max, outputQueue):
@@ -355,12 +526,9 @@ def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
             neighFunctions,
             indStart
         )
-        print('  > {} ; score : {} (previous score = {})'.format(
-            i_solution,
-            score,
-            listScores[i_solution]))
         outputQueue.put((solution, score))
         i_solution += 1
+    nbExplored = i_solution
 
     # add also solutions for which the programm didn't have time to perform
     #   a local search
@@ -368,6 +536,7 @@ def V1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
         outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
         i_solution += 1
     outputQueue.put('Done')
+    print('V1 explored {}/{} solutions'.format(nbExplored, nbSolutions))
 
 def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
        speedCapt, nearSearch, t_max, outputQueue):
@@ -395,18 +564,93 @@ def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
             neighFunctions,
             indStart
         )
-        print('  > {} ; score : {} (previous score = {})'.format(
-            i_solution,
-            score,
-            listScores[i_solution]))
         outputQueue.put((solution, score))
         i_solution += 1
+    nbExplored = i_solution
 
     # add also solutions for which the programm didn't have time to perform
     #   a local search
     while i_solution < nbSolutions:
         outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
         i_solution += 1
+    outputQueue.put('Done')
+    print('V2 explored {}/{} solutions'.format(nbExplored, nbSolutions))
+
+def V3(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+       speedCapt, nearSearch, t_max, outputQueue):
+    '''
+    Compute local search using neighborhoods:
+    - greedyDelete
+    - greedyPivot1
+    - greedyPivot2
+    - localPathPivot1
+
+    t_max : maximum time at which the function should stop
+    '''
+    neighFunctions = [greedyDelete, greedyPivot1, greedyPivot2, localPathPivot1]
+    indStart = 3
+
+    nbSolutions = len(listSolutions)
+    i_solution = 0
+    while (i_solution < nbSolutions) and (time.time() < t_max):
+        nearSearch3 = [nearSearch[0], []]
+        solution, score = V(
+            listSolutions[i_solution],
+            Acapt, Acom,
+            NeighCapt, NeighCom,
+            speedCapt, nearSearch3,
+            t_max,
+            neighFunctions,
+            indStart
+        )
+        outputQueue.put((solution, score))
+        i_solution += 1
+    nbExplored = i_solution
+
+    # add also solutions for which the programm didn't have time to perform
+    #   a local search
+    while i_solution < nbSolutions:
+        outputQueue.put((listSolutions[i_solution], listScores[i_solution]))
+        i_solution += 1
+    outputQueue.put('Done')
+    print('V3 explored {}/{} solutions'.format(nbExplored, nbSolutions))
+
+def V4(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+       speedCapt, nearSearch, t_max, outputQueue):
+    '''
+    Compute local search using neighborhoods:
+    - greedyDelete
+    - greedyPivot1
+    - combineSolutions
+
+    t_max : maximum time at which the function should stop
+    '''
+    neighFunctions = [greedyDelete, greedyPivot1]
+    nSolutions = len(listSolutions)
+
+    improved = True
+    while improved and (time.time() < t_max):
+        # Try to combine solutions
+        solBis, improved = combineSolutions(
+            listSolutions, Acapt, Acom, NeighCapt, NeighCom, t_max)
+
+        if improved:
+            nearSearch4 = [nearSearch[0], []]
+            indStart = 0
+            solution, score = V(
+                solBis,
+                Acapt, Acom,
+                NeighCapt, NeighCom,
+                speedCapt, nearSearch4,
+                t_max,
+                neighFunctions,
+                indStart
+            )
+            listSolutions[0] = solution
+            listScores[0] = score
+    
+    for i in range(nSolutions):
+        outputQueue.put((listSolutions[i], listScores[i]))
     outputQueue.put('Done')
 
 def collectResults(jobs, outputQueue):
@@ -477,7 +721,7 @@ def runParallelV0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, \
     return results
 
 def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
-                  speedCapt, nearSearch, t_max0, nbProcesses):
+                  speedCapt, nearSearch, t_max1, nbProcesses):
     '''
     Function to run in parallel several jobs
     and collect the results
@@ -495,7 +739,7 @@ def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
                 Acapt, Acom,
                 NeighCapt, NeighCom,
                 speedCapt, nearSearch,
-                t_max0,
+                t_max1,
                 outputQueue
             )
         )
@@ -505,7 +749,7 @@ def runParallelV1(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     return results
 
 def runParallelV2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
-                  speedCapt, nearSearch, t_max0, nbProcesses):
+                  speedCapt, nearSearch, t_max2, nbProcesses):
     '''
     Function to run in parallel several jobs
     and collect the results
@@ -523,7 +767,7 @@ def runParallelV2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
                 Acapt, Acom,
                 NeighCapt, NeighCom,
                 speedCapt, nearSearch,
-                t_max0,
+                t_max2,
                 outputQueue
             )
         )
@@ -532,7 +776,63 @@ def runParallelV2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     results = collectResults(jobs, outputQueue)
     return results
 
-def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
+def runParallelV3(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+                  speedCapt, nearSearch, t_max3, nbProcesses):
+    '''
+    Function to run in parallel several jobs
+    and collect the results
+    '''
+    # split the solutions between the processes
+    listWork = splitWork(listSolutions, listScores, nbProcesses)
+    
+    outputQueue = mp.Queue()
+    jobs = []
+    for i in range(nbProcesses):
+        p = mp.Process(
+            target=V3,
+            args=(
+                listWork[i][0], listWork[i][1],
+                Acapt, Acom,
+                NeighCapt, NeighCom,
+                speedCapt, nearSearch,
+                t_max3,
+                outputQueue
+            )
+        )
+        jobs.append(p)
+        p.start()
+    results = collectResults(jobs, outputQueue)
+    return results
+
+def runParallelV4(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
+                  speedCapt, nearSearch, t_max4, nbProcesses):
+    '''
+    Function to run in parallel several jobs
+    and collect the results
+    '''
+    # split the solutions between the processes
+    listWork = splitWork(listSolutions, listScores, nbProcesses)
+    
+    outputQueue = mp.Queue()
+    jobs = []
+    for i in range(nbProcesses):
+        p = mp.Process(
+            target=V4,
+            args=(
+                listWork[i][0], listWork[i][1],
+                Acapt, Acom,
+                NeighCapt, NeighCom,
+                speedCapt, nearSearch,
+                t_max4,
+                outputQueue
+            )
+        )
+        jobs.append(p)
+        p.start()
+    results = collectResults(jobs, outputQueue)
+    return results
+
+def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     '''
     Implement VNS metaheuristic
     '''
@@ -544,9 +844,16 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
     nNodes = Acapt.shape[0]
 
     # parameters
-    t_max0 = t1 + dtMax/20
-    t_max1 = t1 + 4*dtMax/20
-    t_max2 = t1 + dtMax
+    dt0 = dtMax/12
+    dt1 = 6*dtMax/12
+    dt2 = 5*dtMax/12
+    dt3 = 0#10*dtMax/20
+    dt4 = 0#5*dtMax/12
+    t_max0 = t1 + dt0
+    t_max1 = t_max0 + dt1
+    t_max2 = t_max1 + dt2
+    t_max3 = t_max2 + dt3
+    t_max4 = t_max3 + dt4
 
     # multiprocessing (parallel programming)
     nbProcesses = 6
@@ -571,11 +878,14 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
         t_max0,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
-
-    # -- V1
     listSolutions = [res[0] for res in results]
     listScores = [res[1] for res in results]
+    print(' --- V0 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}'.format(dt0))
+    print('  > best score : {}\n'.format(np.min(listScores)))
+
+    # -- V1
     z1 = time.time()
     results = runParallelV1(
         listSolutions, listScores,
@@ -585,53 +895,82 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*4):
         t_max1,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
-
-    # -- V2
     listSolutions = [res[0] for res in results]
     listScores = [res[1] for res in results]
+    print(' --- V1 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}'.format(dt1))
+    print('  > best score : {}\n'.format(np.min(listScores)))
+
+    # -- V2
     z1 = time.time()
     results = runParallelV2(
         listSolutions, listScores,
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max1,
+        t_max2,
         nbProcesses)
     z2 = time.time()
-    print('dt = {}'.format(z2 - z1))
-
-    # get best solution
     listSolutions = [res[0] for res in results]
     listScores = [res[1] for res in results]
+    print(' --- V2 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}'.format(dt2))
+    print('  > best score : {}\n'.format(np.min(listScores)))
+
+    # -- V3
+    '''
+    z1 = time.time()
+    results = runParallelV3(
+        listSolutions, listScores,
+        Acapt, Acom,
+        NeighCapt, NeighCom,
+        speedCapt, nearSearch,
+        t_max3,
+        nbProcesses)
+    z2 = time.time()
+    listSolutions = [res[0] for res in results]
+    listScores = [res[1] for res in results]
+    print(' --- V3 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}'.format(dt3))
+    print('  > best score : {}\n'.format(np.min(listScores)))
+
+    # -- V4
+    z1 = time.time()
+    results = runParallelV4(
+        listSolutions, listScores,
+        Acapt, Acom,
+        NeighCapt, NeighCom,
+        speedCapt, nearSearch,
+        t_max4,
+        nbProcesses)
+    z2 = time.time()
+    listSolutions = [res[0] for res in results]
+    listScores = [res[1] for res in results]
+    print(' --- V4 ---')
+    print('  > dt = {}'.format(z2 - z1))
+    print('  > dt_max = {}'.format(dt4))
+    print('  > best score : {}\n'.format(np.min(listScores)))
+    '''
+
+    # get best solution
     i_best = np.argmin(listScores)
     
-    return listSolutions[i_best], listScores[i_best]
+    return listSolutions[i_best], listScores[i_best], listSolutions
 
 
 if __name__ == '__main__':    
     Rcapt = 1
-    Rcom = 2
-    instanceName = '../Instances/captANOR400_10_80.dat'
+    Rcom = 1
+    instanceName = '../Instances/captANOR625_15_100.dat'
 
     t1 = time.time()
-    solution, score = VNS(instanceName, Rcapt, Rcom)
+    solution, score, listSolutions = VNS(instanceName, Rcapt, Rcom)
     t2 = time.time()
     print('score : {}'.format(score))
     print('dt : {}\n'.format(t2-t1))
-    #print('vectTime : {}\n'.format(vectTime))
 
-    '''
-    vectScore = []
-    t1 = time.time()
-    for i in range(3):
-        print(i)
-        solution, score = VNS(instanceName, Rcapt, Rcom)
-        #print('  > vectTime : {}'.format(vectTime))
-        vectScore.append(score)
-        print()
-    t2 = time.time()
-    print('score mean : {}'.format(np.mean(vectScore)))
-    print('score min : {}\n'.format(np.min(vectScore)))
-    print(t2 - t1)
-    '''
+    # plot solution
+    displaySolution.display(instanceName, Rcapt, Rcom, solution, score)

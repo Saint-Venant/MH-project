@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 
 backtestFiles = [
     'Backtest_VNS_23-10.pkl',
-    'Backtest_VNS_24-10.pkl'
+    'Backtest_VNS_24-10.pkl',
+    'Backtest_VNS_27-10.pkl'
 ]
 
 # read results
@@ -53,7 +54,7 @@ for backtestName in backtestFiles:
         array[i][j][k] = score
 
 # plot scores
-width = 0.35
+width = 0.25
 for instanceName in dictInstance.keys():
     j = dictInstance[instanceName]
     fig, ax = plt.subplots(num=instanceName)
