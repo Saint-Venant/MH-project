@@ -11,11 +11,9 @@ from meta_VNS import heuristics
 #On choisit l'instance avec laquelle on veut travailler
 Rcapt = 1
 Rcom = 2
-instanceName = '../Instances/captANOR225_9_20.dat'
+instanceName = '../Instances/captTRUNC87_10_10.dat'
 
 Acapt, Acom, NeighCapt, NeighCom=parserInstance.parseData(instanceName, Rcapt, Rcom)
-Acapt=Acapt-np.eye(len(Acapt))
-Acom=Acom-np.eye(len(Acom))
 
 def VNS(instanceName, Rcapt, Rcom):
     '''
@@ -55,7 +53,15 @@ def SolutionToAnt(liste,NombreDInstance):
     for elemnt in liste:
         res[elemnt]=1
     return res    
-	
+
+def AntToSolution(liste):
+#    Donne une liste de booléen qui recense là où il y a des 1
+    tmp=[]
+    while np.sum(liste)>0:
+        tmp.append(liste.index(1))
+        liste[liste.index(1)]=0
+    return tmp    
+
 def CreerUnChemin(li,Accessible):
 #    On part d'une liste li et on rajoute un sommet
     #    Accessible=Acom[DernierSommet] ?
@@ -66,22 +72,31 @@ def CreerUnChemin(li,Accessible):
     if len(li)>1500 :
         return "ABORT EVERYTHING"
 #    ON regarde dans un premier tmeps tous les sommets vers lesquels on peut aller
-    if np.sum(Accessible)!=1:print("error proba")
+    if np.sum(Accessible)!=1 or np.sum(Accessible)!=0 :print("error proba",np.sum(Accessible))
     n=len(Accessible)
     p=rd.random()
 #    Probabilité avec laquelle on va choisir le sommet sur lequel aller
-    tmp=0
-#    ON va rajouter des Acc[i] jusqu'à arriver au sommet sélectionné
-    for i in range(n):
-        Acci=Accessible[i]
-        if Acci!=0:
-#            Si le sommet est accessible depuis le sommet que lequel on est 
-            tmp+=Acci
-            if p>=tmp:
-                li.append(i)
+    tmp=[Accessible[0]]
+    li.append(OnVaOu(Accessible))
     return li
 #    ON en choisit un en proba en fonction de rho
 
+k=[0,0,0,0]
+
+def OnVaOu(l):
+    if not abs(sum(l)-1)<10**(-5) or abs(sum(l)-1)-1<10**(-5) : print("sum(l)",sum(l))
+    assert(abs(sum(l)-1)<10**(-5) or abs(sum(l)-1)-1<10**(-5))
+    p=rd.random()
+    tp=[l[0]]
+    if len(l)!=1:
+        for i in range(1,len(l)):
+            tp.append(tp[-1]+l[i])
+    for i in range(len(l)):
+#        il ne faut pas que tp s'incrémente tout de suite contrairement à k
+        if p<tp[i]:
+            return i
+            break
+        i+=1
 
 def Visibilite1(k,Sommets):
 #    C'est cette fonction qu'on va modifier lorsqu'on voudra changer la probabilite de'allr d'un somet à un autre
@@ -98,23 +113,20 @@ def Visibilite1(k,Sommets):
                 LaOuOnPeutAller[i]=0
     return LaOuOnPeutAller            
 
-def Visibilite2(k,Sommets,p=0):
+def Visibilite2(k,Sommets,NombreDInstance,p=0):
+    print("k",k,"Sommets",Sommets)
 #    C'est cette fonction qu'on va modifier lorsqu'on voudra changer la probabilite de'allr d'un somet à un autre
     if not (type(k)==type(1)): print("probleme de type")
 #    Renvoie la liste relative au sommet k telle que : l[i]=0 ssi inateignable, l[i]=1 sinon et p ssi on est déjà passé là
     global Acom
-    LaOuOnPeutAller=Acom[k]
-    n=len(LaOuOnPeutAller)
-    for i in range(n):
-        if LaOuOnPeutAller[i]!=0:
-            if not i==k:
-                if not i in Sommets:
-                    LaOuOnPeutAller[i]=1
-                else:
-                    LaOuOnPeutAller[i]=p
-            else:
-                LaOuOnPeutAller[i]=0
-    return LaOuOnPeutAller            
+    res=NombreDInstance*[0]
+    LaOuOnPeutAller=NeighCom[k][1]
+    for som in LaOuOnPeutAller:
+           if not som in Sommets:
+                res[som]=1
+           else:
+                res[som]=p
+    return res            
     
 def Rho(x,a=0.95,b=-0.05):
 #    Lafocntoin qui évapore les phéromones
@@ -167,34 +179,44 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 	# Formule booleenne qui indique lorsqu on arrete les iterations pour renvoyer la derniere solution obtenue
 	# CriteredArret = tant que on a un nombre de tour >0 et que la sol converge >10
 	AntColony=[]
+#            AntColony vaudra une liste de longueur n et telle que AntColony[i]= le ieme chemin proposé par la ieme fourmi
 	Ant=NombreDInstance*[0]
 	while not CriteredArret:
 		# Construire la solution
-		
-#		La solution est trouvée dans un premier temps avec une autre heuristique
-		AntColony=[]
-#            AntColony vaudra une liste de longueur n et telle que AntColony[i]= le ieme chemin proposé par la ieme fourmi
 		Ant=NombreDInstance*[0]	
 		global sol
 		sol=[]
 #		On a besoin de sol car sol est une liste de sommet, il faut savoir quel sommet on a mis en dernier, et Ant est une liste de booléen, pour se formaliser sur cce qu'on s'était dit initialement
+		OnEstBloque=False
+		print("dfghj,jgbf")
+#        Booléen qui devient vrai dès qu'il faut changer de fourmi
 		for i in range(NombreDInstance):
 #               Pour chaque cible i
+			print("Ant",Ant,i)
 			Ant=np.zeros(NombreDInstance) #liste de 0, on réinitialise Ant
 			sol.append(i)
+			print("sol",sol)
 #                Les fourmis partent d'un point source à n'importe quel sommet en temps
+			if constraints.checkConstraints(SolutionToAnt(sol,NombreDInstance), Acapt, Acom, NeighCom):
+				print("ZAAAAAC")
+				return "ZAAAAC"
 			while not constraints.checkConstraints(SolutionToAnt(sol,NombreDInstance), Acapt, Acom, NeighCom):
+				if OnEstBloque : 
+					break
 				for iter in range(Stop):
-					print("Visibilite2",Visibilite2(i,sol,p=0.3))
-					AccessibiliteDesCibles=MultList(Visibilite2(i,sol,p=0.3),Pheromone)
+					print("Visibilite2",Visibilite2(sol[-1],sol,NombreDInstance,p=0))
+					AccessibiliteDesCibles=MultList(Visibilite2(sol[-1],sol,NombreDInstance,p=0),Pheromone)
 					j=np.sum(AccessibiliteDesCibles)
+					if j==0:
+						print("on a déjà les cibles")
+						OnEstBloque=True
+						break
 					AccessibiliteDesCibles=[g * (1/j) for g in AccessibiliteDesCibles]
 					print("AccessibiliteDesCibles",AccessibiliteDesCibles)
 #                   C'est ici qu'on choisit la probabilité avec laquelle on se déplacae sur chaque somme
 					print("iter",iter)
 					sol=CreerUnChemin(sol,AccessibiliteDesCibles)
 #                    On ajoute un nouveau sommet au chemin
-			break		
 			for sommet in sol:
 				Ant[sommet]=1
 #            On convertit une liste de sommet en une lise de booleen de longueur n
