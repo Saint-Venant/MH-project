@@ -73,3 +73,21 @@ def checkConstraints(solution, Acapt, Acom, NeighCom):
         sCom = np.sum(violationCom)
         ok = (sCom == 0)
     return ok
+
+def checkConstrQuick(solution, i_deleted, Acapt, Acom, NeighCapt, NeighCom):
+    '''
+    solution: solution that was feasible before deleting vertex i_deleted
+    >> Check if the solution is still feasible without i_deleted
+    '''
+    # vertices impacted by the deletion
+    v = NeighCapt[i_deleted][1]
+    impacted = [i_deleted] + v
+    # capt constraints
+    violationCapt = contrainteCapt(solution, Acapt[:, impacted])
+    sCapt = np.sum(violationCapt)
+    ok = (sCapt == 0)
+    if ok:
+        violationCom = contrainteCom(solution, Acom, NeighCom)
+        sCom = np.sum(violationCom)
+        ok = (sCom == 0)
+    return ok
