@@ -55,7 +55,8 @@ def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
     while not(feasible) and (ind < nSelected):
         i = candidates[ind]
         solBis[i] = 0
-        feasible = constraints.checkConstraints(solBis, Acapt, Acom, NeighCom)
+        feasible = constraints.checkConstrQuick(
+            solBis, i, Acapt, Acom, NeighCapt, NeighCom)
         if not(feasible):
             solBis[i] = 1
             ind += 1
@@ -88,8 +89,8 @@ def deleteNb(solution, candidates, nbDeletions, Acapt, Acom, NeighCapt, \
             assert(solution[i] == 1)
             solution[i] = 0
             
-            feasible = constraints.checkConstraints(
-                solution, Acapt, Acom, NeighCom)
+            feasible = constraints.checkConstrQuick(
+                solution, i, Acapt, Acom, NeighCapt, NeighCom)
 
             if feasible:
                 otherCandidates = candidates[ind+1:]
@@ -846,7 +847,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     # parameters
     dt0 = dtMax/12
     dt1 = 6*dtMax/12
-    dt2 = 5*dtMax/12
+    dt2 = 0#5*dtMax/12
     dt3 = 0#10*dtMax/20
     dt4 = 0#5*dtMax/12
     t_max0 = t1 + dt0
@@ -903,6 +904,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     print('  > best score : {}\n'.format(np.min(listScores)))
 
     # -- V2
+    '''
     z1 = time.time()
     results = runParallelV2(
         listSolutions, listScores,
@@ -920,7 +922,6 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     print('  > best score : {}\n'.format(np.min(listScores)))
 
     # -- V3
-    '''
     z1 = time.time()
     results = runParallelV3(
         listSolutions, listScores,
