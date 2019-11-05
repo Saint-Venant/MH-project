@@ -227,13 +227,20 @@ def greedyPivot1_large(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
         speedCapt=speedCapt, nearSearch=nearSearch
     )
 
-def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
+def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, size,
                  speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move if possible :
         - Select 1 empty vertex + another in its com neighborhood
         - Try to delete 3 vertices in their neighborhood
+
+    size:
+        * 'small' : try candidates for deletion in the neighborhood of the
+                inserted vertices
+        * 'large' : try to delete any selected vertex
     '''
+    assert(size in ['small', 'large'])
+    
     solBis = np.copy(solution)
     indexEmpty = np.where(solution == 0)[0]
     indexSelected = np.where(solution == 1)[0][1:]
@@ -277,8 +284,12 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
                 solBis[i2] = 1
 
                 # candidates to be deleted
-                candidates = getCandidatesDeletion(
-                    solBis, [i1, i2], Acapt, NeighCom)
+                if size == 'small':
+                    candidates = getCandidatesDeletion(
+                        solBis, [i1, i2], Acapt, NeighCom)
+                elif size == 'large':
+                    candidates = np.copy(indexSelected)
+                    np.random.shuffle(candidates)
                 nCandidates = candidates.shape[0]
 
                 # Try to find 3 vertices to delete
@@ -313,6 +324,16 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
         pivots = []
 
     return solBis, improved, pivots
+
+def greedyPivot2_small(solution, Acapt, Acom, NeighCapt, NeighCom, t_max,
+                       speedCapt=False, nearSearch=[False, []]):
+    return greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max,
+                        'small', speedCapt=speedCapt, nearSearch=nearSearch)
+
+def greedyPivot2_large(solution, Acapt, Acom, NeighCapt, NeighCom, t_max,
+                       speedCapt=False, nearSearch=[False, []]):
+    return greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max,
+                        'large', speedCapt=speedCapt, nearSearch=nearSearch)
 
 def greedyPivot3(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
                  speedCapt=False, nearSearch=[False, []]):
@@ -581,11 +602,11 @@ def V2(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     Compute local search using neighborhoods:
     - greedyDelete
     - greedyPivot1_small
-    - greedyPivot2
+    - greedyPivot2_small
 
     t_max : maximum time at which the function should stop
     '''
-    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2]
+    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2_small]
     indStart = 2
 
     nbSolutions = len(listSolutions)
@@ -619,12 +640,12 @@ def V3(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     Compute local search using neighborhoods:
     - greedyDelete
     - greedyPivot1_small
-    - greedyPivot2
+    - greedyPivot2_small
     - greedyPivot3
 
     t_max : maximum time at which the function should stop
     '''
-    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2,
+    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2_small,
                       greedyPivot3]
     indStart = 3
 
@@ -659,12 +680,12 @@ def V4(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     Compute local search using neighborhoods:
     - greedyDelete
     - greedyPivot1_small
-    - greedyPivot2
+    - greedyPivot2_small
     - localPathPivot1
 
     t_max : maximum time at which the function should stop
     '''
-    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2,
+    neighFunctions = [greedyDelete, greedyPivot1_small, greedyPivot2_small,
                       localPathPivot1]
     indStart = 3
 
