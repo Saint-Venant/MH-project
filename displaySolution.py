@@ -32,7 +32,8 @@ def display(instanceName, Rcapt, Rcom, solution, score):
         i = indexSelected[ind_i]
         v = NeighCom[i][1]
         for j in v:
-            plt.plot([x[i], x[j]], [y[i], y[j]], c='g')
+            if solution[j] == 1:
+                plt.plot([x[i], x[j]], [y[i], y[j]], c='g')
         if i > 0:
             ax.add_patch(plt.Circle((x[i], y[i]), Rcapt, color='orange', \
                                     alpha=0.1))
