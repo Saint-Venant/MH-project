@@ -666,44 +666,6 @@ def V4(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     outputQueue.put('Done')
     print('V4 explored {}/{} solutions'.format(nbExplored, nbSolutions))
 
-def V5(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
-       speedCapt, nearSearch, t_max, outputQueue):
-    '''
-    Compute local search using neighborhoods:
-    - greedyDelete
-    - greedyPivot1
-    - combineSolutions
-
-    t_max : maximum time at which the function should stop
-    '''
-    neighFunctions = [greedyDelete, greedyPivot1]
-    nSolutions = len(listSolutions)
-
-    improved = True
-    while improved and (time.time() < t_max):
-        # Try to combine solutions
-        solBis, improved = combineSolutions(
-            listSolutions, Acapt, Acom, NeighCapt, NeighCom, t_max)
-
-        if improved:
-            nearSearch5 = [nearSearch[0], []]
-            indStart = 0
-            solution, score = V(
-                solBis,
-                Acapt, Acom,
-                NeighCapt, NeighCom,
-                speedCapt, nearSearch5,
-                t_max,
-                neighFunctions,
-                indStart
-            )
-            listSolutions[0] = solution
-            listScores[0] = score
-    
-    for i in range(nSolutions):
-        outputQueue.put((listSolutions[i], listScores[i]))
-    outputQueue.put('Done')
-
 def collectResults(jobs, outputQueue):
     '''
     jobs : list of multiprocessing.Process that run in parallel
@@ -883,33 +845,6 @@ def runParallelV4(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
     results = collectResults(jobs, outputQueue)
     return results
 
-def runParallelV5(listSolutions, listScores, Acapt, Acom, NeighCapt, NeighCom, \
-                  speedCapt, nearSearch, t_max5, nbProcesses):
-    '''
-    Function to run in parallel several jobs
-    and collect the results
-    '''
-    # split the solutions between the processes
-    listWork = splitWork(listSolutions, listScores, nbProcesses)
-    
-    outputQueue = mp.Queue()
-    jobs = []
-    for i in range(nbProcesses):
-        p = mp.Process(
-            target=V5,
-            args=(
-                listWork[i][0], listWork[i][1],
-                Acapt, Acom,
-                NeighCapt, NeighCom,
-                speedCapt, nearSearch,
-                t_max5,
-                outputQueue
-            )
-        )
-        jobs.append(p)
-        p.start()
-    results = collectResults(jobs, outputQueue)
-    return results
 
 def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     '''
@@ -928,13 +863,6 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     dt2 = 60*1#3*dtMax/6
     dt3 = 0
     dt4 = 0#10*dtMax/20
-    dt5 = 0#5*dtMax/12
-    t_max0 = t1 + dt0
-    t_max1 = t_max0 + dt1
-    t_max2 = t_max1 + dt2
-    t_max3 = t_max2 + dt3
-    t_max4 = t_max3 + dt4
-    t_max5 = t_max4 + dt5
 
     # multiprocessing (parallel programming)
     nbProcesses = 6
@@ -956,7 +884,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max0,
+        time.time() + dt0,
         nbProcesses)
     z2 = time.time()
     listSolutions = [res[0] for res in results]
@@ -973,7 +901,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max1,
+        time.time() + dt1,
         nbProcesses)
     z2 = time.time()
     listSolutions = [res[0] for res in results]
@@ -990,7 +918,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max2,
+        time.time() + dt2,
         nbProcesses)
     z2 = time.time()
     listSolutions = [res[0] for res in results]
@@ -1008,7 +936,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max3,
+        time.time() + dt3,
         nbProcesses)
     z2 = time.time()
     listSolutions = [res[0] for res in results]
@@ -1025,7 +953,7 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
         Acapt, Acom,
         NeighCapt, NeighCom,
         speedCapt, nearSearch,
-        t_max4,
+        time.time() + dt4,
         nbProcesses)
     z2 = time.time()
     listSolutions = [res[0] for res in results]
@@ -1033,23 +961,6 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     print(' --- V4 ---')
     print('  > dt = {}'.format(z2 - z1))
     print('  > dt_max = {}'.format(dt4))
-    print('  > best score : {}\n'.format(np.min(listScores)))
-
-    # -- V5
-    z1 = time.time()
-    results = runParallelV5(
-        listSolutions, listScores,
-        Acapt, Acom,
-        NeighCapt, NeighCom,
-        speedCapt, nearSearch,
-        t_max5,
-        nbProcesses)
-    z2 = time.time()
-    listSolutions = [res[0] for res in results]
-    listScores = [res[1] for res in results]
-    print(' --- V5 ---')
-    print('  > dt = {}'.format(z2 - z1))
-    print('  > dt_max = {}'.format(dt5))
     print('  > best score : {}\n'.format(np.min(listScores)))
     '''
 
