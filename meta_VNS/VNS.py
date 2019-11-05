@@ -28,7 +28,7 @@ import displaySolution
 
 
 
-def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
+def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, t_max=None, \
                  givenCandidates=None, \
                  speedCapt=False, nearSearch=[False, []]):
     '''
@@ -36,6 +36,9 @@ def greedyDelete(solution, Acapt, Acom, NeighCapt, NeighCom, \
 
     When candidates are specified, only consider vertices in candidates for
     deletion
+
+    t_max : useless here -> we want the whole neighborhood to be explored as it
+    is small
     '''
     solBis = np.copy(solution)
     if givenCandidates == None:
@@ -138,7 +141,7 @@ def getCandidatesDeletion(solution, listInserted, Acapt, NeighCom):
     np.random.shuffle(candidates)
     return candidates
     
-def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
+def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, t_max,
                  speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move is possible :
@@ -166,7 +169,7 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
 
     ind = 0
     improved = False
-    while not(improved) and (ind < nEmpty):
+    while not(improved) and (ind < nEmpty) and (time.time() < t_max):
         i = indexEmpty[ind]
         solBis[i] = 1
 
@@ -199,7 +202,7 @@ def greedyPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
         
     return solBis, improved, pivots
 
-def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
+def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
                  speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move if possible :
@@ -232,14 +235,14 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
 
     ind_i1 = 0
     improved = False
-    while not(improved) and (ind_i1 < nEmpty):
+    while not(improved) and (ind_i1 < nEmpty) and (time.time() < t_max):
         i1 = indexEmpty[ind_i1]
         v_i1 = NeighCom[i1][1].copy()
         np.random.shuffle(v_i1)
         assert(len(v_i1) > 0)
 
         ind_i2 = 0
-        while not(improved) and (ind_i2 < len(v_i1)):
+        while not(improved) and (ind_i2 < len(v_i1)) and (time.time() < t_max):
             i2 = v_i1[ind_i2]
 
             if (markedPairs[i1, i2] == 0) and (solBis[i2] == 0):
@@ -286,7 +289,7 @@ def greedyPivot2(solution, Acapt, Acom, NeighCapt, NeighCom, \
 
     return solBis, improved, pivots
 
-def greedyPivot3(solution, Acapt, Acom, NeighCapt, NeighCom, \
+def greedyPivot3(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
                  speedCapt=False, nearSearch=[False, []]):
     '''
     For a given solution, test if this move if possible :
@@ -318,7 +321,7 @@ def greedyPivot3(solution, Acapt, Acom, NeighCapt, NeighCom, \
     ind_i2 = 1
     ind_i3 = 2
     improved = False
-    while not(improved) and (ind_i3 < nEmpty):
+    while not(improved) and (ind_i3 < nEmpty) and (time.time() < t_max):
         # insert 3 vertices
         i1 = indexEmpty[ind_i1]
         i2 = indexEmpty[ind_i2]
@@ -372,7 +375,7 @@ def greedyPivot3(solution, Acapt, Acom, NeighCapt, NeighCom, \
 
     return solBis, improved, pivots
 
-def localPathPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
+def localPathPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, t_max, \
                     speedCapt=False, nearSearch=[False, []]):
     '''
     To explore a wider neighborhood, build a path (of max length 5) of
@@ -435,86 +438,7 @@ def localPathPivot1(solution, Acapt, Acom, NeighCapt, NeighCom, \
             indInsert += 1
     print('  * {}'.format(len(listInserted)))
 
-    return solBis, improved, []
-
-def combine2Solutions(solution1, solution2, Acapt, Acom, NeighCapt, NeighCom):
-    '''
-    Try to combine 2 solutions (idea of path relinking)
-    '''
-    solBis = np.copy(solution1)
-
-    # vertices not in solution1
-    indexEmpty = np.where(solBis == 0)[0]
-    nEmpty = indexEmpty.shape[0]
-
-    # candidates for deletion : vertices that are in solution1 but not in
-    # solution2
-    candidates = np.where(np.multiply(solBis == 1, solution2 == 0))[0]
-    nCandidates = candidates.shape[0]
-    np.random.shuffle(candidates)
-    print('  > {} candidates (combineSolutions)'.format(nCandidates))
-
-    np.random.shuffle(indexEmpty)
-    improved = False
-    ind = 0
-    while not(improved) and (ind < nEmpty):
-        i = indexEmpty[ind]
-        assert(solBis[i] == 0)
-        solBis[i] = 1
-
-        ind_j1 = 0
-        ind_j2 = 1
-        while not(improved) and (ind_j1 < nCandidates - 1):
-            # Try to delete j1
-            j1 = candidates[ind_j1]
-            assert(solBis[j1] == 1)
-            solBis[j1] = 0
-            feasible = constraints.checkConstraints(
-                solBis, Acapt, Acom, NeighCom)
-
-            while feasible and not(improved) and (ind_j2 < nCandidates):
-                # Try to delete j2
-                j2 = candidates[ind_j2]
-                assert(solBis[j2] == 1)
-                solBis[j2] = 0
-                
-                improved = constraints.checkConstraints(
-                    solBis, Acapt, Acom, NeighCom)
-
-                if not(improved):
-                    solBis[j2] = 1
-                    ind_j2 += 1
-
-            if not(improved):
-                solBis[j1] = 1
-                ind_j1 += 1
-                ind_j2 = ind_j1 + 1
-                
-
-        # Try another pivot if the solution cannot be improved
-        if not(improved):
-            ind += 1
-            solBis[i] = 0
-
-    return solBis, improved
-
-def combineSolutions(listSolutions, Acapt, Acom, NeighCapt, NeighCom, t_max):
-    '''
-    Try to combine the best solution with all the others
-    '''
-    solutionRef = listSolutions[0]
-    nSolutions = len(listSolutions)
-
-    improved = False
-    ind = 1
-    while not(improved) and (ind < nSolutions) and (time.time() < t_max):
-        solution2 = listSolutions[ind]
-        solBis, improved = combine2Solutions(
-            solutionRef, solution2, Acapt, Acom, NeighCapt, NeighCom)
-        if not(improved):
-            ind += 1
-
-    return solBis, improved    
+    return solBis, improved, [] 
 
 def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
       t_max, neighFunctions, indStart):
@@ -537,6 +461,7 @@ def V(solution, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch, \
             Acom,
             NeighCapt,
             NeighCom,
+            t_max,
             speedCapt=speedCapt,
             nearSearch=nearSearch
         )
@@ -578,7 +503,7 @@ def V0(solutionInitial, Acapt, Acom, NeighCapt, NeighCom, speedCapt, nearSearch,
             NeighCom,
             speedCapt,
             nearSearch0,
-            time.time() + 60*10,
+            t_max,
             neighFunctions,
             indStart
         )
@@ -998,9 +923,9 @@ def VNS(instanceName, Rcapt, Rcom, dtMax=60*6):
     nNodes = Acapt.shape[0]
 
     # parameters
-    dt0 = dtMax/6
-    dt1 = 2*dtMax/6
-    dt2 = 3*dtMax/6
+    dt0 = 30#dtMax/6
+    dt1 = 60*1#2*dtMax/6
+    dt2 = 60*1#3*dtMax/6
     dt3 = 0
     dt4 = 0#10*dtMax/20
     dt5 = 0#5*dtMax/12
