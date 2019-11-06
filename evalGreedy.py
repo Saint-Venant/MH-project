@@ -9,7 +9,7 @@ from meta_VNS import parserInstance
 from meta_VNS.VNS import greedyDelete
 
 
-def eval(instanceName, Rcapt, Rcom, nbTries):
+def evalPerf(instanceName, Rcapt, Rcom, nbTries):
     '''
     For a given instanceName and values of Rcapt and Rcom, compute nbTries
     greedy descents
@@ -35,3 +35,38 @@ def eval(instanceName, Rcapt, Rcom, nbTries):
         listDt.append(t2 - t1)
 
     return listScores, listDt
+
+
+if __name__ == '__main__':
+    # instance names
+    names = [
+        'captGRID100_10_10.dat',
+        'captGRID400_20_20.dat',
+        'captGRID1600_40_40.dat'
+    ]
+    instanceNames = ['Instances/{}'.format(name) for name in names]
+
+    # (Rcapt, Rcom)
+    vectR = [(1,1), (1,2)]
+
+    results = []
+    nbTries = 100
+    for instanceName in instanceNames:
+        print(' --- {} ---'.format(instanceName))
+        for (Rcapt, Rcom) in vectR:
+            listScores, listDt = evalPerf(instanceName, Rcapt, Rcom, nbTries)
+            results.append([
+                instanceName,
+                Rcapt, Rcom,
+                nbTries,
+                listScores, listDt
+            ])
+            print('  > Rcapt = {} ; Rcom = {}'.format(Rcapt, Rcom))
+            scoreMean = np.mean(listScores)
+            scoreSigma = np.sqrt(np.var(listScores))
+            dtMean = np.mean(listDt)
+            dtSigma = np.sqrt(np.var(listDt))
+            print('      * score = {}  ;  sigma = {}'.format(scoreMean, \
+                                                             scoreSigma))
+            print('      * dt = {}  ;  sigma = {}'.format(dtMean, dtSigma))
+        print()
