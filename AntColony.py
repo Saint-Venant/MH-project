@@ -7,7 +7,8 @@ from meta_VNS import constraints
 #On choisit l'instance avec laquelle on veut travailler
 Rcapt = 1
 Rcom = 2
-instanceName = '../Instances/captANOR400_10_80.dat'
+instanceName = '../Instances/captTRUNC90_10_10.dat'
+print(instanceName)
 
 Acapt, Acom, NeighCapt, NeighCom=parserInstance.parseData(instanceName, Rcapt, Rcom)
 
@@ -73,7 +74,7 @@ def Visibilite2(k,Sommets,NombreDInstance,p=0):
                 res[som]=p
     return res            
     
-def Evaporation(x,a=0.95,b=0):
+def Evaporation(x,a=0.6,b=0):
 #    Lafocntoin qui évapore les phéromones
 #    x est la liste des phéromones
 #    Cette fonction est un fonction affine ax+b décroissante qu'il faut modifier si besoin
@@ -108,9 +109,6 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 	Acapt,Acom,NeighCapt,NeighCom = parserInstance.parseData(instanceName, Rcapt, Rcom)
 	#Initialization
 	NombreDInstance=len(parserInstance.readInstance(instanceName))
-#    Cette soluition est trouvée au préalable par une autre heuristique
-#	print(solution)
-#	assert(constraints.checkConstraints(solution, Acapt, Acom, NeighCom))
 	assert(NombreDInstance==len(Acapt))
 	global Pheromone
 	
@@ -121,6 +119,7 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 	# NombreDeTour est le nombre d'itération max qu'on s'est fixé
 	LaSolutionConverge=0
 	# LaSolutionConverge est incrémenté dès que la solution n'est pas changée
+#    On a abandonné cette idée puisqu'on a besoin de mauvaises solution pour les phéromones
 	CriteredArret=( NombreDeTour<0 and LaSolutionConverge>10)
 	# Formule booleenne qui indique lorsqu on arrete les iterations pour renvoyer la derniere solution obtenue
 	# CriteredArret = tant que on a un nombre de tour >0 et que la sol converge >10
@@ -129,46 +128,29 @@ def ColonyAnt(instanceName,Rcapt,Rcom):
 		sol=[]
 #		On a besoin de sol car sol est une liste de sommet, il faut savoir quel sommet on a mis en dernier, et Ant est une liste de booléen, pour se formaliser sur cce qu'on s'était dit initialement
 		OnEstBloque=False
-#		print("dfghj,jgbf")
 #        Booléen qui devient vrai dès qu'il faut changer de fourmi
-		for i in range(NombreDInstance):
+		for i in range(int(4)):
 #               Pour chaque cible i
 			sol.append(i)
-#			print("sol",sol)
 #                Les fourmis partent d'un point source à n'importe quel sommet en temps
 			while not constraints.checkConstraints(np.array(SolutionToAnt(sol,NombreDInstance)), Acapt, Acom, NeighCom):
 				if OnEstBloque : 
 #					assert(False)
 					break
 				for iter in range(Stop):
-#					print("Visibilite2",Visibilite2(sol[-1],sol,NombreDInstance,p=0))
 					assert(type(sol[-1])==int)
 					AccessibiliteDesCibles=MultList(Visibilite2(sol[-1],sol,NombreDInstance,p=0),Pheromone)
 					j=np.sum(AccessibiliteDesCibles)
 					if j==0:
-#						print("on a déjà les cibles")
 						OnEstBloque=True
 						break
 					AccessibiliteDesCibles=[g * (1/j) for g in AccessibiliteDesCibles]
-#					print("AccessibiliteDesCibles",AccessibiliteDesCibles)
 #                   C'est ici qu'on choisit la probabilité avec laquelle on se déplacae sur chaque somme
-#					print("iter",iter)
 					sol=CreerUnChemin(sol,AccessibiliteDesCibles)
 					assert(type(sol[-1])==int)
 #                    On ajoute un nouveau sommet au chemin
 			if constraints.checkConstraints(np.array(SolutionToAnt(sol,NombreDInstance)), Acapt, Acom, NeighCom):
 			    return SolutionToAnt(sol,NombreDInstance)
-            
-#		On regarde comparativement le taux de phéromones des sommets et si l'un ou l'autre a un taux particulièrement élevé on agit comme suit 
-#		On fait évaporer des phéromones de manière constante sauf si :
-#		 
-#			#deux possibilités si sommet très interessant :
-#			on enlève des possibilités pour vérifier si on est pas bloqué dans un optimum local
-#				On fait quelques recherches en fonction de ça
-#				c'est mieux,-> on continue en enlevant les phéromones du sommet/on empêche son accès
-#				C'est moins bien -> on le force dans chaque solution comme hypothèse pour améliorer le temeps de calcul
-#
-#        on fera ça dans un second temps hein
         
 Colonie=[]
 EvolutionDesScores=[]
@@ -189,12 +171,13 @@ def GenerationDeFourmi():
     
     for fourmi in range(NombreDeFourmi):
         assert(len(Pheromone)==len(Colonie[fourmi]))
-        Pheromone[fourmi]+=ScoreAlternatif(Colonie[fourmi],NombreDInstance)
+        Pheromone=[x+y for (x,y) in zip(Pheromone,Colonie[fourmi])]
     Pheromone=Evaporation(Pheromone)
     
 ScoreMin=[]
 ScoreMoy=[]
-for gen in range(50):    
+for gen in range(10):    
+    print("generation",gen)
     GenerationDeFourmi()
     ScoreMoy.append(np.mean(EvolutionDesScores[-NombreDInstance:len(EvolutionDesScores)]))
     ScoreMin.append(np.min(EvolutionDesScores[-NombreDInstance:len(EvolutionDesScores)]))
@@ -208,13 +191,4 @@ import matplotlib.pyplot as mp
 mp.plot(ScoreMoy)
 mp.plot(ScoreMin)
 
-'''
-Le critèr d'arrêt est : nombre max d'itération; ça fait longtemps qu'on a pas amélioré la sol; temps en secondes
-On part dune solution trouvée au préalable et on l'améliore
-On peut booster l'évaporation de phéromones pour sortir de minima locaux
-Pour réajuster le temps de calcul on peut forcer l'existence de sommets dans la solution, point charnière
-Les fourmis partent des cibles pour aller au puit. -> disparaissent une fois qu'elles se rejoigent
-Une fois les solutions formées à la fin du parcours des fourmis faire en sorte de réajuster la solution obtenue, enlever les cycles jusqu'à ce qu'on ait un arbre
-	
-'''	
 	
